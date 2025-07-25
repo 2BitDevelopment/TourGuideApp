@@ -21,6 +21,15 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="CustomMap"
+          options={{
+            title: 'Cathedral Map',
+            headerStyle: { backgroundColor: '#b61f24' },
+            headerTintColor: '#fff',
+            headerTitleStyle: { fontFamily: 'SpaceMono', fontSize: 20 },
+          }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

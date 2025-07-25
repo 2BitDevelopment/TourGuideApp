@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import { Link } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -10,8 +12,12 @@ const CathedralIcon = () => (
 );
 
 const CathedralHomePage = () => {
+  const navigation = useNavigation<any>();
   const handleVirtualTour = () => {
     // Handle virtual tour navigation
+    // navigation.navigate('CustomMap');
+    // navigate not working
+    // <Link href="/CustomMap" />;
     console.log('Starting virtual tour...');
   };
 
@@ -29,7 +35,7 @@ const CathedralHomePage = () => {
         </Text>
         
         <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
-          <Text style={styles.buttonText}>Begin Virtual Tour</Text>
+          <Link style={styles.buttonText} href="/CustomMap">Begin Virtual Tour</Link>
         </TouchableOpacity>
         
         <Text style={styles.footerText}>
