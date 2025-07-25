@@ -1,11 +1,11 @@
 import React from 'react';
-import { Image } from 'react-native';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Cathedral Icon Component
 const CathedralIcon = () => (
               <Image
         source={require("../assets/images/ST_GEORGES_CATHEDRAL_LOGO.png")}
+        style={{ width: 200, height: 200, marginBottom: 40 }}
       />
 );
 
@@ -24,7 +24,8 @@ const CathedralHomePage = () => {
         <Text style={styles.title}>St. George's Cathedral</Text>
         
         <Text style={styles.subtitle}>
-          Known as the "People's Cathedral" for its role in the resistance against apartheid, St. George's Cathedral is the oldest cathedral in Southern Africa.
+          Known as the "People's Cathedral" for its role in the resistance against apartheid,
+          St. George's Cathedral is the oldest cathedral in Southern Africa.
         </Text>
         
         <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
