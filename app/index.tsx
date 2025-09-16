@@ -35,7 +35,7 @@ const CathedralHomePage = () => {
         </Text>
         
         <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
-          <Link style={styles.buttonText} href="/CustomMap">Begin Virtual Tour</Link>
+          <Link style={styles.buttonText} href="/MapPage">Begin Virtual Tour</Link>
         </TouchableOpacity>
         
         <Text style={styles.footerText}>
