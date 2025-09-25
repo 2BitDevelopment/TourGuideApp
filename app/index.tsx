@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
 
 // Cathedral Icon Component
 const CathedralIcon = () => (
@@ -21,6 +21,13 @@ const CathedralHomePage = () => {
     console.log('Starting virtual tour...');
   };
 
+  const handleDonate = () => {
+    const url = 'https://stgeorgescathedral.org.za/';
+    Linking.openURL(url).catch(() => {
+      console.warn('Unable to open donation link');
+    });
+  };
+
   return (
     <View style={styles.container}>
       {/* Main Content */}
@@ -34,9 +41,19 @@ const CathedralHomePage = () => {
           St. George's Cathedral is the oldest cathedral in Southern Africa.
         </Text>
         
-        <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
-          <Link style={styles.buttonText} href="/MapPage">Begin Virtual Tour</Link>
-        </TouchableOpacity>
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
+            <Link style={styles.buttonText} href="/MapPage">Begin Virtual Tour</Link>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button}>
+            <Link style={styles.buttonText} href="/FirstThursdays">First Thursdays</Link>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={handleDonate}>
+            <Text style={styles.buttonText}>Donate →</Text>
+          </TouchableOpacity>
+        </View>
         
         <Text style={styles.footerText}>
           Tap to explore the historical landmarks
@@ -78,6 +95,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 30,
     paddingBottom: 80,
+  },
+  buttonsContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
   iconContainer: {
     marginBottom: 40,
@@ -184,7 +205,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     borderWidth: 1,
     borderColor: 'white',
-    marginBottom: 20,
+    marginBottom: 16,
+    minWidth: 220,
   },
   buttonText: {
     color: 'white',

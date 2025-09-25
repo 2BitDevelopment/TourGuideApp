@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import React from 'react';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -12,27 +13,21 @@ export default function RootLayout() {
   });
 
   if (!loaded) {
-    // Async font loading only occurs in development.
     return null;
   }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="CustomMap"
-          options={{
-            title: 'Cathedral Map',
-            headerStyle: { backgroundColor: '#b61f24' },
-            headerTintColor: '#fff',
-            headerTitleStyle: { fontFamily: 'SpaceMono', fontSize: 20 },
-          }}
-        />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="MapPage" />
+        <Stack.Screen name="FirstThursdays" />
+        <Stack.Screen name="ThankYou" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
   );
 }
+
+

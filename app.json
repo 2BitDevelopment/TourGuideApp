@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to show your position inside the cathedral and highlight nearby points of interest.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We use your location to show your position inside the cathedral and highlight nearby points of interest."
+      }
     },
     "android": {
       "adaptiveIcon": {
