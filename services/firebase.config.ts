@@ -11,7 +11,7 @@ export const firebaseConfig = {
 
 // Collection names
 export const COLLECTIONS = {
-  TOUR_ITEMS: 'tourItems',
+  POI_ITEMS: 'POIs',
   IMAGES: 'images'
 } as const;
 

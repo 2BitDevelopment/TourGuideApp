@@ -40,7 +40,7 @@ export class DatabaseApi {
    */
   async getAllPOIs(): Promise<POI[]> {
     try {
-      const POIItemsCollection = collection(db, COLLECTIONS.TOUR_ITEMS);
+      const POIItemsCollection = collection(db, COLLECTIONS.POI_ITEMS);
       const querySnapshot = await getDocs(POIItemsCollection);
 
       const POIs: POI[] = [];
@@ -74,7 +74,7 @@ export class DatabaseApi {
    */
   async getPOIById(itemId: string): Promise<POI | null> {
     try {
-      const docRef = doc(db, COLLECTIONS.TOUR_ITEMS, itemId);
+      const docRef = doc(db, COLLECTIONS.POI_ITEMS, itemId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
