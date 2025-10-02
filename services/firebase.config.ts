@@ -1,5 +1,5 @@
 // Firebase configuration
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: process.env.apiKey,
   authDomain: process.env.authDomain,
   projectId: process.env.projectId,
