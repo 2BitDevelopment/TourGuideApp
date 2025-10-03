@@ -14,6 +14,15 @@ import { COLLECTIONS, firebaseConfig, STORAGE_PATHS } from './firebase.config';
 export type { Location, POI } from '../types/database';
 
 // Initialize Firebase
+console.log('Initializing Firebase...');
+console.log('Firebase config:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  // Don't log sensitive keys, just check if they exist
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAppId: !!firebaseConfig.appId
+});
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -40,12 +49,21 @@ export class DatabaseApi {
     try {
       const POIItemsCollection = collection(db, COLLECTIONS.POI_ITEMS);
       const querySnapshot = await getDocs(POIItemsCollection);
+      
+      if (querySnapshot.empty) {
+        console.warn('No documents found in collection');
+        return [];
+      }
 
       const POIs: POI[] = [];
+      let docCount = 0;
+      
       querySnapshot.forEach((doc) => {
-        console.log(doc.id, " => ", doc.data());
+        docCount++;
+        
         const data = doc.data();
-        POIs.push({
+        
+        const poi = {
           id: doc.id,
           title: data.title || '',
           text: data.text || '',
@@ -56,7 +74,10 @@ export class DatabaseApi {
           },
           description: data.description || '',
           imageID: data.imageID || ''
-        });
+        };
+        
+        console.log('Created POI object:', poi);
+        POIs.push(poi);
       });
       
       return POIs;

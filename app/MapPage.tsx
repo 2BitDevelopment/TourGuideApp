@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Dimensions, Image, LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import DatabaseApi from '../services/DatabaseApi';
+import { Alert, Image, LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import DatabaseApi, { POI } from '../services/DatabaseApi';
 
 type Marker = {
   id: number;
@@ -11,46 +11,12 @@ type Marker = {
   image?: any;
   blurb?: string;
   history?: string;
+  isPOI?: boolean; // Flag for database POIs
+  poiData?: POI; // Store original POI data
 };
 
-const lorem = 'The ornate wooden pulpit is where sermons are delivered during services. Crafted from rich mahogany, the pulpit features intricate carvings depicting biblical scenes and symbols.';
-const hist = "From this pulpit, Archbishop Desmond Tutu and other religious leaders spoke out against apartheid. Many famous sermons advocating for justice and reconciliation were delivered here during South Africa's struggle for democracy.";
-
-// Placeholder images (replace with real photos in assets/images/poi/)
+// Fallback image for POIs without loaded images
 const fallbackImg = require('../assets/images/react-logo.png');
-const poiImages = {
-//   // Specific mappings provided
-//   northAisle: require('../assets/images/st_george_images/img_03.jpg'),
-//   northTransept: require('../assets/images/st_george_images/img_16.jpg'),
-//   southTransept: require('../assets/images/st_george_images/img_14.jpg'),
-//   platform: require('../assets/images/st_george_images/img_12.jpg'),
-
-//   // Reasonable defaults for the rest (can be updated anytime)
-  link: require('../assets/images/react-logo.png')
-//   stJohnsChapel: require('../assets/images/st_george_images/img_10.jpg'),
-//   sanctuary: require('../assets/images/st_george_images/img_18.jpg'),
-//   stDavidsChapel: require('../assets/images/st_george_images/img_11.jpg'),
-//   southAisle: require('../assets/images/st_george_images/img_05.jpg'),
-//   ladyChapel: require('../assets/images/st_george_images/img_06.jpg'),
-//   bellTower: require('../assets/images/st_george_images/img_21.jpg'),
-} as const;
-
-const markersSeed: Marker[] = [
-  { id: 1, x: 0.48, y: 0.72, title: 'The Link', blurb: lorem, history: hist, image: poiImages.link },
-]
-//   { id: 2, x: 0.18, y: 0.52, title: 'North Aisle', blurb: lorem, history: hist, image: poiImages.northAisle },
-//   { id: 3, x: 0.36, y: 0.34, title: 'North Transept', blurb: lorem, history: hist, image: poiImages.northTransept },
-//   { id: 4, x: 0.70, y: 0.40, title: 'South Transept', blurb: lorem, history: hist, image: poiImages.southTransept },
-//   { id: 5, x: 0.52, y: 0.62, title: 'Platform', blurb: lorem, history: hist, image: poiImages.platform },
-//   { id: 6, x: 0.10, y: 0.70, title: "St John's Chapel", blurb: lorem, history: hist, image: poiImages.stJohnsChapel },
-//   { id: 7, x: 0.60, y: 0.18, title: 'Sanctuary', blurb: lorem, history: hist, image: poiImages.sanctuary },
-//   { id: 8, x: 0.20, y: 0.80, title: "St David's Chapel", blurb: lorem, history: hist, image: poiImages.stDavidsChapel },
-//   { id: 9, x: 0.82, y: 0.58, title: 'South Aisle', blurb: lorem, history: hist, image: poiImages.southAisle },
-//   { id: 10, x: 0.86, y: 0.88, title: 'Lady Chapel', blurb: lorem, history: hist, image: poiImages.ladyChapel },
-//   { id: 11, x: 0.12, y: 0.16, title: 'Bell Tower', blurb: lorem, history: hist, image: poiImages.bellTower },
-// ];
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const MapPage = () => {
   // User position within map (percent coordinates 0..1)
@@ -58,34 +24,18 @@ const MapPage = () => {
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
 
   // Bottom sheet selection (only opens when a POI is tapped)
-  const [markers, setMarkers] = useState<Marker[]>(markersSeed);
   const [sheetId, setSheetId] = useState<number | null>(null);
-  const selectedMarker = useMemo(() => markers.find(m => m.id === sheetId) ?? null, [sheetId, markers]);
 
-  // Edit mode for fine-tuning POI positions
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [editableId, setEditableId] = useState<number | null>(null);
+
   
-  // Database test state
-  const [isTestingDB, setIsTestingDB] = useState<boolean>(false);
 
-  // Determine nearest POI to user
-  const nearestId = useMemo(() => {
-    if (markers.length === 0) return null;
-    
-    let bestId = markers[0].id;
-    let bestDist = Number.POSITIVE_INFINITY;
-    for (const m of markers) {
-      const dx = userPos.x - m.x;
-      const dy = userPos.y - m.y;
-      const d = Math.hypot(dx, dy);
-      if (d < bestDist) {
-        bestDist = d;
-        bestId = m.id;
-      }
-    }
-    return bestId;
-  }, [userPos, markers]);
+  
+  // Database POIs state
+  const [dbPOIs, setDbPOIs] = useState<POI[]>([]);
+  const [loadingPOIs, setLoadingPOIs] = useState<boolean>(false);
+  const [poiImages, setPOIImages] = useState<Map<string, string>>(new Map());
+
+
 
   const onMapLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -97,35 +47,105 @@ const MapPage = () => {
     setUserPos({ x: xPixels / mapSize.width, y: yPixels / mapSize.height });
   };
 
-  const testDatabase = async () => {
-    if (isTestingDB) return;
+  // Convert latitude/longitude to x/y percentage coordinates for the map
+  const convertLocationToMapCoords = (lat: number, lon: number) => {
+    // Map bounds for St. George's Cathedral area (adjust these based on your actual map)
+    const northWest = { lat: 0, lon: 0 };
+    const southEast = { lat: 100, lon: 100 };
+
+    const clamp = (v: number) => Math.max(0, Math.min(1, v));
+    const x = clamp((lon - northWest.lon) / (southEast.lon - northWest.lon));
+    const y = clamp((lat - northWest.lat) / (southEast.lat - northWest.lat));
+
+    return { x, y };
+  };
+
+  // Load POIs from database
+  const loadPOIsFromDatabase = async () => {
+    if (loadingPOIs) return;
     
-    setIsTestingDB(true);
+    setLoadingPOIs(true);
     try {
-      const allPOIs = await DatabaseApi.getAllPOIs();
-      console.log(`📊 Fetched ${allPOIs.length} POIs:`, allPOIs);
+      console.log('Loading POIs from database...');
+      const pois = await DatabaseApi.getAllPOIs();
+      console.log(`Loaded ${pois.length} POIs from database`);
       
-      // Test 2: Get specific POI if any exist
-      if (allPOIs.length > 0) {
-        console.log('📄 Testing getPOIById...');
-        const firstPOI = await DatabaseApi.getPOIById(allPOIs[0].id);
-        console.log('📄 Fetched specific POI:', firstPOI);
-      }
-      Alert.alert(
-        'Database Test Complete'
-      );
+      setDbPOIs(pois);
       
-      } catch (error) {
-      console.error('Database test failed:', error);
+      // Load images for each POI
+      //TODO
+      // for (const poi of pois) {
+      //   if (poi.imageID) {
+      //     try {
+      //       const imageUrl = await DatabaseApi.loadImage(poi.imageID);
+      //       if (imageUrl) {
+      //         setPOIImages(prev => new Map(prev.set(poi.id, imageUrl)));
+      //       }
+      //     } catch (error) {
+      //       console.error(`Failed to load image for POI ${poi.id}:`, error);
+      //     }
+      //   }
+      // }
+      
+    } catch (error) {
+      console.error('Failed to load POIs:', error);
       Alert.alert(
-        'Database Test Failed',
-        `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck console for details.`,
-        [{ text: 'OK' }]
+        'Error Loading POIs', 
+        'Failed to load points of interest from the database. Please check your connection and try again.'
       );
     } finally {
-      setIsTestingDB(false);
+      setLoadingPOIs(false);
     }
   };
+
+  // Convert database POIs to map markers
+  const databaseMarkers = useMemo(() => {
+    return dbPOIs.map((poi, index) => {
+      const coords = convertLocationToMapCoords(poi.location.latitude, poi.location.longitude);
+      return {
+        id: parseInt(poi.id) || (1000 + index), // Use POI id if numeric, otherwise generate one
+        x: coords.x,
+        y: coords.y,
+        title: poi.title,
+        blurb: poi.text || poi.description,
+        history: poi.description,
+        image: poiImages.get(poi.id) ? { uri: poiImages.get(poi.id) } : fallbackImg,
+        isPOI: true, // Flag to distinguish from seed markers
+        poiData: poi // Store original POI data
+      };
+    });
+  }, [dbPOIs, poiImages]);
+
+  // Use only database markers
+  const allMarkers = useMemo(() => {
+    return databaseMarkers;
+  }, [databaseMarkers]);
+
+  // Selected marker for bottom sheet
+  const selectedMarker = useMemo(() => allMarkers.find(m => m.id === sheetId) ?? null, [sheetId, allMarkers]);
+
+  // Determine nearest POI to user
+  const nearestId = useMemo(() => {
+    if (allMarkers.length === 0) return null;
+    
+    let bestId = allMarkers[0].id;
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (const m of allMarkers) {
+      const dx = userPos.x - m.x;
+      const dy = userPos.y - m.y;
+      const d = Math.hypot(dx, dy);
+      if (d < bestDist) {
+        bestDist = d;
+        bestId = m.id;
+      }
+    }
+    return bestId;
+  }, [userPos, allMarkers]);
+
+  // Load POIs from database on component mount
+  useEffect(() => {
+    loadPOIsFromDatabase();
+  }, []);
 
   // Request location and subscribe
   useEffect(() => {
@@ -168,13 +188,8 @@ const MapPage = () => {
         onStartShouldSetResponder={() => true}
         onResponderRelease={(e) => {
           const { locationX, locationY } = e.nativeEvent;
-          if (editMode && editableId != null) {
-            const x = Math.max(0, Math.min(1, locationX / mapSize.width));
-            const y = Math.max(0, Math.min(1, locationY / mapSize.height));
-            setMarkers(prev => prev.map(m => m.id === editableId ? { ...m, x, y } : m));
-          } else {
-            moveUserTo(locationX, locationY);
-          }
+          // Only allow user position updates (POI positions come from database)
+          moveUserTo(locationX, locationY);
         }}
       >
         {/* Floorplan background */}
@@ -191,7 +206,7 @@ const MapPage = () => {
           }]}
           pointerEvents="none"
         />
-        {markers.map(m => (
+        {allMarkers.map(m => (
           <TouchableOpacity
             key={m.id}
             accessibilityRole="button"
@@ -203,11 +218,7 @@ const MapPage = () => {
               borderColor: nearestId === m.id ? '#ffffff' : 'transparent'
             }]}
             onPress={() => {
-              if (editMode) {
-                setEditableId(m.id);
-              } else {
-                setSheetId(m.id);
-              }
+              setSheetId(m.id);
             }}
           >
             <Text style={styles.pinText}>{m.id}</Text>
@@ -215,30 +226,15 @@ const MapPage = () => {
         ))}
       </View>
 
-      {/* Edit controls */}
+      {/* Database controls */}
       <View style={styles.editControls} pointerEvents="box-none">
         <TouchableOpacity 
-          style={[styles.editButton, isTestingDB ? styles.editOn : undefined]} 
-          onPress={testDatabase}
-          disabled={isTestingDB}
+          style={[styles.editButton, loadingPOIs ? styles.editOn : undefined]} 
+          onPress={loadPOIsFromDatabase}
+          disabled={loadingPOIs}
         >
-          <Text style={styles.editText}>{isTestingDB ? 'Testing...' : 'Test DB'}</Text>
+          <Text style={styles.editText}>{loadingPOIs ? 'Loading...' : `POIs (${dbPOIs.length})`}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.editButton, editMode ? styles.editOn : undefined]} onPress={() => setEditMode(v => !v)}>
-          <Text style={styles.editText}>{editMode ? 'Editing' : 'Edit'}</Text>
-        </TouchableOpacity>
-        {editMode && (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => {
-              const exportData = markers.map(({ id, x, y, title }) => ({ id, x: Number(x.toFixed(3)), y: Number(y.toFixed(3)), title }));
-              // eslint-disable-next-line no-console
-              console.log('POI positions:', JSON.stringify(exportData, null, 2));
-            }}
-          >
-            <Text style={styles.editText}>Dump</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Bottom sheet only when a POI is selected */}
@@ -266,8 +262,8 @@ const MapPage = () => {
             <TouchableOpacity
               style={[styles.pillButton, styles.pillGhost]}
               onPress={() => {
-                const idx = markers.findIndex(m => m.id === selectedMarker.id);
-                const next = markers[(idx + 1) % markers.length];
+                const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                const next = allMarkers[(idx + 1) % allMarkers.length];
                 setSheetId(next.id);
               }}
             >
