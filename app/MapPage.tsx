@@ -1,6 +1,5 @@
-import * as Location from 'expo-location';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Image, LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, Image, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
 
 type Marker = {
@@ -19,12 +18,16 @@ type Marker = {
 const fallbackImg = require('../assets/images/react-logo.png');
 
 const MapPage = () => {
-  // User position within map (percent coordinates 0..1)
-  const [userPos, setUserPos] = useState<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
 
   // Bottom sheet selection (only opens when a POI is tapped)
   const [sheetId, setSheetId] = useState<number | null>(null);
+
+  // Pan and zoom state
+  const pan = useRef(new Animated.ValueXY()).current;
+  const scale = useRef(new Animated.Value(2)).current; // Start with 2x zoom
+  const lastPan = useRef({ x: 0, y: 0 });
+  const lastScale = useRef(2);
 
 
   
@@ -42,9 +45,107 @@ const MapPage = () => {
     setMapSize({ width, height });
   };
 
-  const moveUserTo = (xPixels: number, yPixels: number) => {
-    if (mapSize.width <= 0 || mapSize.height <= 0) return;
-    setUserPos({ x: xPixels / mapSize.width, y: yPixels / mapSize.height });
+
+
+  // Pan responder for handling pan and zoom gestures
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (evt) => {
+      // Only start pan responder if not tapping on a marker
+      return evt.nativeEvent.touches.length <= 2;
+    },
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // Start pan if moved more than 10 pixels or if pinching
+      return Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10 || evt.nativeEvent.touches.length === 2;
+    },
+    onPanResponderGrant: () => {
+      // Store the current pan and scale values
+      pan.setOffset({
+        x: lastPan.current.x,
+        y: lastPan.current.y,
+      });
+      pan.setValue({ x: 0, y: 0 });
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      // Handle pinch-to-zoom if there are multiple touches
+      if (evt.nativeEvent.touches.length === 2) {
+        const touch1 = evt.nativeEvent.touches[0];
+        const touch2 = evt.nativeEvent.touches[1];
+        
+        const distance = Math.sqrt(
+          Math.pow(touch2.pageX - touch1.pageX, 2) + 
+          Math.pow(touch2.pageY - touch1.pageY, 2)
+        );
+        
+        // Simple pinch-to-zoom implementation
+        const normalizedDistance = distance / 200; // Normalize distance
+        const newScale = Math.max(0.5, Math.min(4, lastScale.current * normalizedDistance / 2));
+        scale.setValue(newScale);
+      } else {
+        // Single touch - pan
+        Animated.event([null, { dx: pan.x, dy: pan.y }], {
+          useNativeDriver: false,
+        })(evt, gestureState);
+      }
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      pan.flattenOffset();
+      
+      // Clean up listeners to prevent memory leaks
+      pan.removeAllListeners();
+      scale.removeAllListeners();
+      
+      // Update stored values
+      pan.addListener((value) => {
+        lastPan.current = value;
+      });
+      
+      scale.addListener((value) => {
+        lastScale.current = value.value;
+      });
+
+      // Tap handling removed - no user position to update
+    },
+  });
+
+  // Reset zoom function
+  const resetZoom = () => {
+    Animated.parallel([
+      Animated.timing(pan, {
+        toValue: { x: 0, y: 0 },
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(scale, {
+        toValue: 2,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start();
+    
+    lastPan.current = { x: 0, y: 0 };
+    lastScale.current = 2;
+  };
+
+  // Zoom in function
+  const zoomIn = () => {
+    const newScale = Math.min(4, lastScale.current * 1.5);
+    Animated.timing(scale, {
+      toValue: newScale,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+    lastScale.current = newScale;
+  };
+
+  // Zoom out function
+  const zoomOut = () => {
+    const newScale = Math.max(0.5, lastScale.current / 1.5);
+    Animated.timing(scale, {
+      toValue: newScale,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+    lastScale.current = newScale;
   };
 
   // Convert latitude/longitude to x/y percentage coordinates for the map
@@ -124,56 +225,22 @@ const MapPage = () => {
   // Selected marker for bottom sheet
   const selectedMarker = useMemo(() => allMarkers.find(m => m.id === sheetId) ?? null, [sheetId, allMarkers]);
 
-  // Determine nearest POI to user
-  const nearestId = useMemo(() => {
-    if (allMarkers.length === 0) return null;
-    
-    let bestId = allMarkers[0].id;
-    let bestDist = Number.POSITIVE_INFINITY;
-    for (const m of allMarkers) {
-      const dx = userPos.x - m.x;
-      const dy = userPos.y - m.y;
-      const d = Math.hypot(dx, dy);
-      if (d < bestDist) {
-        bestDist = d;
-        bestId = m.id;
-      }
-    }
-    return bestId;
-  }, [userPos, allMarkers]);
+
 
   // Load POIs from database on component mount
   useEffect(() => {
     loadPOIsFromDatabase();
   }, []);
 
-  // Request location and subscribe
+  // Cleanup listeners on unmount
   useEffect(() => {
-    let sub: Location.LocationSubscription | null = null;
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
+    return () => {
+      pan.removeAllListeners();
+      scale.removeAllListeners();
+    };
+  }, []);
 
-      // NOTE: GPS accuracy indoors is limited; later we can integrate beacons.
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, timeInterval: 2000, distanceInterval: 1 },
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          // Simple affine mapping: calibrate two corners to map percent space
-          // TEMP: Rough bounds for Cape Town Cathedral area (example only)
-          const northWest = { lat: -33.92427, lon: 18.41950 };
-          const southEast = { lat: -33.92500, lon: 18.42030 };
 
-          const clamp = (v: number) => Math.max(0, Math.min(1, v));
-          const x = clamp((longitude - northWest.lon) / (southEast.lon - northWest.lon));
-          const y = clamp((latitude - northWest.lat) / (southEast.lat - northWest.lat));
-
-          setUserPos({ x, y });
-        }
-      );
-    })();
-    return () => { if (sub) sub.remove(); };
-  }, [mapSize.width, mapSize.height]);
 
   return (
     <View style={styles.container}>
@@ -181,49 +248,48 @@ const MapPage = () => {
         <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
       </View>
 
-      {/* Map mock using gray block with tappable markers positioned by percentage */}
+      {/* Map with pan and zoom functionality */}
       <View
         style={styles.mapArea}
         onLayout={onMapLayout}
-        onStartShouldSetResponder={() => true}
-        onResponderRelease={(e) => {
-          const { locationX, locationY } = e.nativeEvent;
-          // Only allow user position updates (POI positions come from database)
-          moveUserTo(locationX, locationY);
-        }}
+        {...panResponder.panHandlers}
       >
-        {/* Floorplan background */}
-        <Image
-          source={require('../assets/images/cathedral-floor.svg')}
-          style={styles.floor}
-          resizeMode="contain"
-        />
-        {/* User position indicator */}
-        <View
-          style={[styles.userDot, {
-            left: `${userPos.x * 100}%`,
-            top: `${userPos.y * 100}%`,
-          }]}
-          pointerEvents="none"
-        />
-        {allMarkers.map(m => (
-          <TouchableOpacity
-            key={m.id}
-            accessibilityRole="button"
-            style={[styles.pin, {
-              left: `${m.x * 100}%`,
-              top: `${m.y * 100}%`,
-              backgroundColor: nearestId === m.id ? '#b61f24' : '#991b1b',
-              borderWidth: nearestId === m.id ? 2 : 0,
-              borderColor: nearestId === m.id ? '#ffffff' : 'transparent'
-            }]}
-            onPress={() => {
-              setSheetId(m.id);
-            }}
-          >
-            <Text style={styles.pinText}>{m.id}</Text>
-          </TouchableOpacity>
-        ))}
+        <Animated.View
+          style={[
+            styles.mapContent,
+            {
+              transform: [
+                { translateX: pan.x },
+                { translateY: pan.y },
+                { scale: scale },
+              ],
+            },
+          ]}
+        >
+          {/* Floorplan background */}
+          <Image
+            source={require('../assets/images/cathedral-floor.svg')}
+            style={styles.floor}
+            resizeMode="contain"
+          />
+
+          {allMarkers.map(m => (
+            <TouchableOpacity
+              key={m.id}
+              accessibilityRole="button"
+              style={[styles.pin, {
+                left: `${m.x * 100}%`,
+                top: `${m.y * 100}%`,
+                backgroundColor: '#991b1b'
+              }]}
+              onPress={() => {
+                setSheetId(m.id);
+              }}
+            >
+              <Text style={styles.pinText}>{m.id}</Text>
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
       </View>
 
       {/* Database controls */}
@@ -234,6 +300,25 @@ const MapPage = () => {
           disabled={loadingPOIs}
         >
           <Text style={styles.editText}>{loadingPOIs ? 'Loading...' : `POIs (${dbPOIs.length})`}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Zoom controls */}
+      <View 
+        style={[
+          styles.zoomControls, 
+          selectedMarker && { bottom: '65%' } // Move up when bottom sheet is open
+        ]} 
+        pointerEvents="box-none"
+      >
+        <TouchableOpacity style={styles.zoomButton} onPress={zoomIn}>
+          <Text style={styles.zoomButtonText}>+</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.zoomButton} onPress={zoomOut}>
+          <Text style={styles.zoomButtonText}>−</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.zoomButton} onPress={resetZoom}>
+          <Text style={styles.resetButtonText}>⌂</Text>
         </TouchableOpacity>
       </View>
 
@@ -280,13 +365,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6' },
   header: { alignItems: 'center', paddingTop: 16, paddingBottom: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
   brand: { color: '#b61f24', fontSize: 24, fontWeight: '800', textAlign: 'center' },
-  mapArea: { flex: 1, backgroundColor: '#f3f4f6', position: 'relative' },
+  mapArea: { flex: 1, backgroundColor: '#f3f4f6', position: 'relative', overflow: 'hidden' },
+  mapContent: { flex: 1, width: '100%', height: '100%' },
   floor: { ...StyleSheet.absoluteFillObject },
   editControls: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 8 },
   editButton: { backgroundColor: 'rgba(0,0,0,0.5)', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
   editOn: { backgroundColor: '#b61f24' },
   editText: { color: 'white', fontWeight: '700' },
-  userDot: { position: 'absolute', width: 18, height: 18, borderRadius: 9, backgroundColor: '#2563eb', borderWidth: 3, borderColor: 'white', transform: [{ translateX: -9 }, { translateY: -9 }], shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
+  zoomControls: { position: 'absolute', bottom: 12, right: 12, flexDirection: 'column', gap: 8 },
+  zoomButton: { backgroundColor: 'rgba(0,0,0,0.7)', width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
+  zoomButtonText: { color: 'white', fontSize: 20, fontWeight: '700' },
+  resetButtonText: { color: 'white', fontSize: 16, fontWeight: '700' },
   pin: { position: 'absolute', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: -14 }, { translateY: -14 }] },
   pinText: { color: 'white', fontWeight: '700', fontSize: 12 },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, top: '40%', backgroundColor: 'white', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: -2 } },
