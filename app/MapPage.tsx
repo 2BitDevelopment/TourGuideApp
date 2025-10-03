@@ -1,472 +1,272 @@
-import { MapPin, Navigation, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as Location from 'expo-location';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Dimensions, Image, LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Marker type
 type Marker = {
   id: number;
-  x: number;
-  y: number;
-  label: string;
-  color: string;
+  x: number; // percentage 0..1 across map area
+  y: number; // percentage 0..1 down map area
+  title: string;
+  image?: any;
+  blurb?: string;
+  history?: string;
 };
 
-type MapState = {
-  x: number;
-  y: number;
-  zoom: number;
-  isDragging: boolean;
-  dragStart: { x: number; y: number };
-  mapStart: { x: number; y: number };
-};
+const lorem = 'The ornate wooden pulpit is where sermons are delivered during services. Crafted from rich mahogany, the pulpit features intricate carvings depicting biblical scenes and symbols.';
+const hist = "From this pulpit, Archbishop Desmond Tutu and other religious leaders spoke out against apartheid. Many famous sermons advocating for justice and reconciliation were delivered here during South Africa's struggle for democracy.";
 
-const MapViewer = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [canvasSize, setCanvasSize] = useState<{ width: number; height: number }>({
-    width: window.innerWidth,
-    height: window.innerHeight
-  });
-  const [mapState, setMapState] = useState<MapState>({
-    x: 0,
-    y: 0,
-    zoom: 1,
-    isDragging: false,
-    dragStart: { x: 0, y: 0 },
-    mapStart: { x: 0, y: 0 }
-  });
+// Placeholder images (replace with real photos in assets/images/poi/)
+const fallbackImg = require('../assets/images/react-logo.png');
+const poiImages = {
+//   // Specific mappings provided
+//   northAisle: require('../assets/images/st_george_images/img_03.jpg'),
+//   northTransept: require('../assets/images/st_george_images/img_16.jpg'),
+//   southTransept: require('../assets/images/st_george_images/img_14.jpg'),
+//   platform: require('../assets/images/st_george_images/img_12.jpg'),
 
-  // Sample markers data
-  const [markers, setMarkers] = useState<Marker[]>(
-    [
-      { id: 1, x: 100, y: 150, label: 'Location A', color: '#ef4444' },
-      { id: 2, x: 300, y: 200, label: 'Location B', color: '#3b82f6' },
-      { id: 3, x: 450, y: 300, label: 'Location C', color: '#10b981' }
-    ]
-  );
+//   // Reasonable defaults for the rest (can be updated anytime)
+  link: require('../assets/images/react-logo.png')
+//   stJohnsChapel: require('../assets/images/st_george_images/img_10.jpg'),
+//   sanctuary: require('../assets/images/st_george_images/img_18.jpg'),
+//   stDavidsChapel: require('../assets/images/st_george_images/img_11.jpg'),
+//   southAisle: require('../assets/images/st_george_images/img_05.jpg'),
+//   ladyChapel: require('../assets/images/st_george_images/img_06.jpg'),
+//   bellTower: require('../assets/images/st_george_images/img_21.jpg'),
+} as const;
 
-  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
+const markersSeed: Marker[] = [
+  { id: 1, x: 0.48, y: 0.72, title: 'The Link', blurb: lorem, history: hist, image: poiImages.link },
+]
+//   { id: 2, x: 0.18, y: 0.52, title: 'North Aisle', blurb: lorem, history: hist, image: poiImages.northAisle },
+//   { id: 3, x: 0.36, y: 0.34, title: 'North Transept', blurb: lorem, history: hist, image: poiImages.northTransept },
+//   { id: 4, x: 0.70, y: 0.40, title: 'South Transept', blurb: lorem, history: hist, image: poiImages.southTransept },
+//   { id: 5, x: 0.52, y: 0.62, title: 'Platform', blurb: lorem, history: hist, image: poiImages.platform },
+//   { id: 6, x: 0.10, y: 0.70, title: "St John's Chapel", blurb: lorem, history: hist, image: poiImages.stJohnsChapel },
+//   { id: 7, x: 0.60, y: 0.18, title: 'Sanctuary', blurb: lorem, history: hist, image: poiImages.sanctuary },
+//   { id: 8, x: 0.20, y: 0.80, title: "St David's Chapel", blurb: lorem, history: hist, image: poiImages.stDavidsChapel },
+//   { id: 9, x: 0.82, y: 0.58, title: 'South Aisle', blurb: lorem, history: hist, image: poiImages.southAisle },
+//   { id: 10, x: 0.86, y: 0.88, title: 'Lady Chapel', blurb: lorem, history: hist, image: poiImages.ladyChapel },
+//   { id: 11, x: 0.12, y: 0.16, title: 'Bell Tower', blurb: lorem, history: hist, image: poiImages.bellTower },
+// ];
 
-  // Update canvas size on mount and resize
-  useEffect(() => {
-    const handleResize = () => {
-      setCanvasSize({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-  // Draw the map
-  const drawMap = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+const MapPage = () => {
+  // User position within map (percent coordinates 0..1)
+  const [userPos, setUserPos] = useState<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
+  const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
 
-    // Set canvas width/height to match device size
-    canvas.width = canvasSize.width;
-    canvas.height = canvasSize.height;
+  // Bottom sheet selection (only opens when a POI is tapped)
+  const [markers, setMarkers] = useState<Marker[]>(markersSeed);
+  const [sheetId, setSheetId] = useState<number | null>(null);
+  const selectedMarker = useMemo(() => markers.find(m => m.id === sheetId) ?? null, [sheetId, markers]);
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const { width, height } = canvas;
+  // Edit mode for fine-tuning POI positions
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [editableId, setEditableId] = useState<number | null>(null);
 
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Save context for transformations
-    ctx.save();
-
-    // Apply zoom and pan transformations
-    ctx.translate(mapState.x, mapState.y);
-    ctx.scale(mapState.zoom, mapState.zoom);
-
-    // Draw map background (grid pattern)
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.lineWidth = 1;
+  // Determine nearest POI to user
+  const nearestId = useMemo(() => {
+    if (markers.length === 0) return null;
     
-    const gridSize = 50;
-    const startX = Math.floor(-mapState.x / (mapState.zoom * gridSize)) * gridSize;
-    const startY = Math.floor(-mapState.y / (mapState.zoom * gridSize)) * gridSize;
-    const endX = startX + (width / mapState.zoom) + gridSize;
-    const endY = startY + (height / mapState.zoom) + gridSize;
-
-    // Vertical lines
-    for (let x = startX; x < endX; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, startY);
-      ctx.lineTo(x, endY);
-      ctx.stroke();
-    }
-
-    // Horizontal lines
-    for (let y = startY; y < endY; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(startX, y);
-      ctx.lineTo(endX, y);
-      ctx.stroke();
-    }
-
-    // Draw some sample terrain features
-    ctx.fillStyle = '#dbeafe';
-    ctx.beginPath();
-    ctx.arc(250, 250, 80, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#dcfce7';
-    ctx.fillRect(400, 100, 150, 100);
-
-    ctx.fillStyle = '#fef3c7';
-    ctx.beginPath();
-    ctx.moveTo(50, 350);
-    ctx.lineTo(200, 300);
-    ctx.lineTo(180, 400);
-    ctx.closePath();
-    ctx.fill();
-
-    // Draw markers
-    markers.forEach(marker => {
-      ctx.fillStyle = marker.color;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-
-      // Marker pin shape
-      ctx.beginPath();
-      ctx.arc(marker.x, marker.y - 8, 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Marker point
-      ctx.beginPath();
-      ctx.moveTo(marker.x, marker.y);
-      ctx.lineTo(marker.x - 4, marker.y - 12);
-      ctx.lineTo(marker.x + 4, marker.y - 12);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Label
-      if (selectedMarker === marker.id) {
-        ctx.fillStyle = '#000000';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(marker.label, marker.x, marker.y - 25);
+    let bestId = markers[0].id;
+    let bestDist = Number.POSITIVE_INFINITY;
+    for (const m of markers) {
+      const dx = userPos.x - m.x;
+      const dy = userPos.y - m.y;
+      const d = Math.hypot(dx, dy);
+      if (d < bestDist) {
+        bestDist = d;
+        bestId = m.id;
       }
-    });
-
-    // Restore context
-    ctx.restore();
-  }, [mapState, markers, selectedMarker, canvasSize]);
-
-  // Handle mouse/touch events
-  const handlePointerDown = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
     }
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
+    return bestId;
+  }, [userPos, markers]);
 
-    // Check if clicking on a marker
-    const worldX = (x - mapState.x) / mapState.zoom;
-    const worldY = (y - mapState.y) / mapState.zoom;
-
-    let clickedMarker: number | null = null;
-    markers.forEach(marker => {
-      const distance = Math.sqrt(
-        Math.pow(worldX - marker.x, 2) + Math.pow(worldY - marker.y, 2)
-      );
-      if (distance <= 15) {
-        clickedMarker = marker.id;
-      }
-    });
-
-    if (clickedMarker !== null) {
-      setSelectedMarker(selectedMarker === clickedMarker ? null : clickedMarker);
-    } else {
-      setMapState(prev => ({
-        ...prev,
-        isDragging: true,
-        dragStart: { x, y },
-        mapStart: { x: prev.x, y: prev.y }
-      }));
-      setSelectedMarker(null);
-    }
+  const onMapLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setMapSize({ width, height });
   };
 
-  const handlePointerMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!mapState.isDragging) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    const deltaX = x - mapState.dragStart.x;
-    const deltaY = y - mapState.dragStart.y;
-
-    setMapState(prev => ({
-      ...prev,
-      x: prev.mapStart.x + deltaX,
-      y: prev.mapStart.y + deltaY
-    }));
+  const moveUserTo = (xPixels: number, yPixels: number) => {
+    if (mapSize.width <= 0 || mapSize.height <= 0) return;
+    setUserPos({ x: xPixels / mapSize.width, y: yPixels / mapSize.height });
   };
 
-  const handlePointerUp = () => {
-    setMapState(prev => ({
-      ...prev,
-      isDragging: false
-    }));
-  };
-
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return;
-    e.preventDefault();
-    const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.max(0.1, Math.min(5, mapState.zoom * zoomFactor));
-
-    // Zoom towards mouse position
-    const zoomPoint = {
-      x: (mouseX - mapState.x) / mapState.zoom,
-      y: (mouseY - mapState.y) / mapState.zoom
-    };
-
-    setMapState(prev => ({
-      ...prev,
-      zoom: newZoom,
-      x: mouseX - zoomPoint.x * newZoom,
-      y: mouseY - zoomPoint.y * newZoom
-    }));
-  };
-
-  const zoomIn = () => {
-    setMapState(prev => ({
-      ...prev,
-      zoom: Math.min(5, prev.zoom * 1.2)
-    }));
-  };
-
-  const zoomOut = () => {
-    setMapState(prev => ({
-      ...prev,
-      zoom: Math.max(0.1, prev.zoom * 0.8)
-    }));
-  };
-
-  const resetView = () => {
-    setMapState(prev => ({
-      ...prev,
-      x: 0,
-      y: 0,
-      zoom: 1
-    }));
-  };
-
-  const addMarker = () => {
-    const newMarker: Marker = {
-      id: Date.now(),
-      x: Math.random() * 500 + 50,
-      y: Math.random() * 400 + 50,
-      label: `Location ${markers.length + 1}`,
-      color: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'][Math.floor(Math.random() * 5)]
-    };
-    setMarkers(prev => [...prev, newMarker]);
-  };
-
-  // Track pinch state
-  const pinchState = useRef<{
-    initialDistance: number | null;
-    initialZoom: number;
-    initialCenter: { x: number; y: number } | null;
-    initialPan: { x: number; y: number };
-  }>({
-    initialDistance: null,
-    initialZoom: 1,
-    initialCenter: null,
-    initialPan: { x: 0, y: 0 }
-  });
-
-  // Pinch-to-zoom handler
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-
-      const x1 = touch1.clientX - rect.left;
-      const y1 = touch1.clientY - rect.top;
-      const x2 = touch2.clientX - rect.left;
-      const y2 = touch2.clientY - rect.top;
-
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      const center = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
-
-      if (pinchState.current.initialDistance === null) {
-        pinchState.current.initialDistance = distance;
-        pinchState.current.initialZoom = mapState.zoom;
-        pinchState.current.initialCenter = center;
-        pinchState.current.initialPan = { x: mapState.x, y: mapState.y };
-        return;
-      }
-
-      const scale = distance / pinchState.current.initialDistance;
-      let newZoom = Math.max(0.1, Math.min(5, pinchState.current.initialZoom * scale));
-
-      // Zoom towards pinch center
-      const zoomPoint = {
-        x: (center.x - pinchState.current.initialPan.x) / pinchState.current.initialZoom,
-        y: (center.y - pinchState.current.initialPan.y) / pinchState.current.initialZoom
-      };
-
-      setMapState(prev => ({
-        ...prev,
-        zoom: newZoom,
-        x: center.x - zoomPoint.x * newZoom,
-        y: center.y - zoomPoint.y * newZoom
-      }));
-    } else if (e.touches.length === 1) {
-      // fallback to drag
-      handlePointerMove(e);
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    pinchState.current.initialDistance = null;
-    pinchState.current.initialZoom = mapState.zoom;
-    pinchState.current.initialCenter = null;
-    pinchState.current.initialPan = { x: mapState.x, y: mapState.y };
-    handlePointerUp();
-  };
-
-  // Redraw when state changes
+  // Request location and subscribe
   useEffect(() => {
-    drawMap();
-  }, [drawMap]);
+    let sub: Location.LocationSubscription | null = null;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      // NOTE: GPS accuracy indoors is limited; later we can integrate beacons.
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.Balanced, timeInterval: 2000, distanceInterval: 1 },
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          // Simple affine mapping: calibrate two corners to map percent space
+          // TEMP: Rough bounds for Cape Town Cathedral area (example only)
+          const northWest = { lat: -33.92427, lon: 18.41950 };
+          const southEast = { lat: -33.92500, lon: 18.42030 };
+
+          const clamp = (v: number) => Math.max(0, Math.min(1, v));
+          const x = clamp((longitude - northWest.lon) / (southEast.lon - northWest.lon));
+          const y = clamp((latitude - northWest.lat) / (southEast.lat - northWest.lat));
+
+          setUserPos({ x, y });
+        }
+      );
+    })();
+    return () => { if (sub) sub.remove(); };
+  }, [mapSize.width, mapSize.height]);
 
   return (
-    <div className="w-full h-screen bg-gray-100 flex flex-col">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b p-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Custom Map Viewer</h1>
-        <div className="text-sm text-gray-600">
-          Zoom: {(mapState.zoom * 100).toFixed(0)}%
-        </div>
-      </div>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+      </View>
 
-      {/* Map Container */}
-      <div className="flex-1 relative">
-        <canvas
-          ref={canvasRef}
-          className="absolute top-0 left-0"
-          style={{
-            width: '100vw',
-            height: '100vh',
-            cursor: mapState.isDragging ? 'grabbing' : 'grab',
-            touchAction: 'none'
-          }}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onWheel={handleWheel}
+      {/* Map mock using gray block with tappable markers positioned by percentage */}
+      <View
+        style={styles.mapArea}
+        onLayout={onMapLayout}
+        onStartShouldSetResponder={() => true}
+        onResponderRelease={(e) => {
+          const { locationX, locationY } = e.nativeEvent;
+          if (editMode && editableId != null) {
+            const x = Math.max(0, Math.min(1, locationX / mapSize.width));
+            const y = Math.max(0, Math.min(1, locationY / mapSize.height));
+            setMarkers(prev => prev.map(m => m.id === editableId ? { ...m, x, y } : m));
+          } else {
+            moveUserTo(locationX, locationY);
+          }
+        }}
+      >
+        {/* Floorplan background */}
+        <Image
+          source={require('../assets/images/cathedral-floor.svg')}
+          style={styles.floor}
+          resizeMode="contain"
         />
+        {/* User position indicator */}
+        <View
+          style={[styles.userDot, {
+            left: `${userPos.x * 100}%`,
+            top: `${userPos.y * 100}%`,
+          }]}
+          pointerEvents="none"
+        />
+        {markers.map(m => (
+          <TouchableOpacity
+            key={m.id}
+            accessibilityRole="button"
+            style={[styles.pin, {
+              left: `${m.x * 100}%`,
+              top: `${m.y * 100}%`,
+              backgroundColor: nearestId === m.id ? '#b61f24' : '#991b1b',
+              borderWidth: nearestId === m.id ? 2 : 0,
+              borderColor: nearestId === m.id ? '#ffffff' : 'transparent'
+            }]}
+            onPress={() => {
+              if (editMode) {
+                setEditableId(m.id);
+              } else {
+                setSheetId(m.id);
+              }
+            }}
+          >
+            <Text style={styles.pinText}>{m.id}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {/* Control Panel */}
-        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-3 space-y-2">
-          <button
-            onClick={zoomIn}
-            className="w-full flex items-center justify-center p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+      {/* Edit controls */}
+      <View style={styles.editControls} pointerEvents="box-none">
+        <TouchableOpacity style={[styles.editButton, editMode ? styles.editOn : undefined]} onPress={() => setEditMode(v => !v)}>
+          <Text style={styles.editText}>{editMode ? 'Editing' : 'Edit'}</Text>
+        </TouchableOpacity>
+        {editMode && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => {
+              const exportData = markers.map(({ id, x, y, title }) => ({ id, x: Number(x.toFixed(3)), y: Number(y.toFixed(3)), title }));
+              // eslint-disable-next-line no-console
+              console.log('POI positions:', JSON.stringify(exportData, null, 2));
+            }}
           >
-            <ZoomIn size={20} />
-          </button>
-          <button
-            onClick={zoomOut}
-            className="w-full flex items-center justify-center p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          >
-            <ZoomOut size={20} />
-          </button>
-          <button
-            onClick={resetView}
-            className="w-full flex items-center justify-center p-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-          >
-            <RotateCcw size={20} />
-          </button>
-          <button
-            onClick={addMarker}
-            className="w-full flex items-center justify-center p-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-          >
-            <MapPin size={20} />
-          </button>
-        </div>
+            <Text style={styles.editText}>Dump</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4 max-w-xs">
-          <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
-            <Navigation size={16} className="mr-2" />
-            Map Legend
-          </h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-100 rounded mr-2"></div>
-              <span>Water Body</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-100 rounded mr-2"></div>
-              <span>Park Area</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-100 rounded mr-2"></div>
-              <span>Desert Area</span>
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t text-xs text-gray-500">
-            • Click and drag to pan
-            • Scroll to zoom
-            • Click markers for info
-          </div>
-        </div>
-      </div>
+      {/* Bottom sheet only when a POI is selected */}
+      {selectedMarker && (
+        <View style={styles.sheet}>
+          <View style={styles.sheetHandle} />
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+            <View style={styles.sheetHeaderRow}>
+              <Text style={styles.sheetIndex}>{selectedMarker.id}</Text>
+              <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
+            </View>
+            <Image source={selectedMarker.image ?? fallbackImg} style={styles.sheetImage} resizeMode="cover" />
+            <Text style={styles.sheetBody}>{selectedMarker.blurb}</Text>
+            <Text style={styles.sectionTitle}>Historical Significance</Text>
+            <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
+          </ScrollView>
 
-      {/* Status Bar */}
-      <div className="bg-white border-t p-2 flex justify-between items-center text-sm text-gray-600">
-        <div>
-          Position: ({Math.round(-mapState.x)}, {Math.round(-mapState.y)})
-        </div>
-        <div>
-          Markers: {markers.length} | Selected: {selectedMarker ? `#${selectedMarker}` : 'None'}
-        </div>
-      </div>
-    </div>
+          <View style={styles.sheetFooter}>
+            <TouchableOpacity style={[styles.pillButton, styles.pillGhost]} onPress={() => setSheetId(null)}>
+              <Text style={[styles.pillText, styles.pillGhostText]}>‹ Close</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]}>
+              <Text style={[styles.pillText, styles.pillPrimaryText]}>Audio Guide ▌▌</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.pillButton, styles.pillGhost]}
+              onPress={() => {
+                const idx = markers.findIndex(m => m.id === selectedMarker.id);
+                const next = markers[(idx + 1) % markers.length];
+                setSheetId(next.id);
+              }}
+            >
+              <Text style={[styles.pillText, styles.pillGhostText]}>Next ›</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
   );
 };
 
-export default MapViewer;
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f3f4f6' },
+  header: { alignItems: 'center', paddingTop: 16, paddingBottom: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  brand: { color: '#b61f24', fontSize: 24, fontWeight: '800', textAlign: 'center' },
+  mapArea: { flex: 1, backgroundColor: '#f3f4f6', position: 'relative' },
+  floor: { ...StyleSheet.absoluteFillObject },
+  editControls: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 8 },
+  editButton: { backgroundColor: 'rgba(0,0,0,0.5)', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
+  editOn: { backgroundColor: '#b61f24' },
+  editText: { color: 'white', fontWeight: '700' },
+  userDot: { position: 'absolute', width: 18, height: 18, borderRadius: 9, backgroundColor: '#2563eb', borderWidth: 3, borderColor: 'white', transform: [{ translateX: -9 }, { translateY: -9 }], shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } },
+  pin: { position: 'absolute', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: -14 }, { translateY: -14 }] },
+  pinText: { color: 'white', fontWeight: '700', fontSize: 12 },
+  sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, top: '40%', backgroundColor: 'white', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: -2 } },
+  sheetHandle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', marginBottom: 8 },
+  sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  sheetIndex: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#b61f24', color: 'white', textAlign: 'center', textAlignVertical: 'center', fontWeight: '700', marginRight: 8 },
+  sheetTitle: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 8 },
+  sheetImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 12 },
+  sheetBody: { fontSize: 14, color: '#374151', lineHeight: 20, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#b61f24', marginBottom: 6 },
+  sheetFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  pillButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 999 },
+  pillText: { fontSize: 14, fontWeight: '700' },
+  pillGhost: { backgroundColor: '#f3f4f6' },
+  pillGhostText: { color: '#111827' },
+  pillPrimary: { backgroundColor: '#b61f24' },
+  pillPrimaryText: { color: 'white' },
+});
+
+export default MapPage;

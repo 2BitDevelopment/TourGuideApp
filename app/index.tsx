@@ -1,6 +1,7 @@
 import { black, primaryColor, white } from '@/constants/Colors';
 import { Link } from 'expo-router';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Cathedral Icon Component
 const CathedralIcon = () => (
@@ -19,6 +20,22 @@ const Arrow = () => (
 );
 
 const CathedralHomePage = () => {
+  const navigation = useNavigation<any>();
+  const handleVirtualTour = () => {
+    // Handle virtual tour navigation
+    // navigation.navigate('CustomMap');
+    // navigate not working
+    // <Link href="/CustomMap" />;
+    console.log('Starting virtual tour...');
+  };
+
+  const handleDonate = () => {
+    const url = 'https://stgeorgescathedral.org.za/';
+    Linking.openURL(url).catch(() => {
+      console.warn('Unable to open donation link');
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -33,24 +50,28 @@ const CathedralHomePage = () => {
           Cathedral is the oldest cathedral{'\n'}
           in Southern Africa.
         </Text>
+        
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
+            <Link style={styles.buttonText} href="/MapPage">Begin Virtual Tour</Link>
+          </TouchableOpacity>
 
-        <View style={styles.buttonGroup}>
-          <Link href="/MapPage" asChild>
-            <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>Begin Virtual Tour <Arrow /></Text>
-            </TouchableOpacity>
-          </Link>
-          <Link href="/FirstThursdays" asChild>
-            <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>First Thursdays <Arrow /></Text>
-            </TouchableOpacity>
-          </Link>
-          <Link href="/Donate" asChild>
-            <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>Donate <Arrow /></Text>
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity style={styles.button}>
+            <Link style={styles.buttonText} href="/FirstThursdays">First Thursdays</Link>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={handleDonate}>
+            <Text style={styles.buttonText}>Donate →</Text>
+          </TouchableOpacity>
         </View>
+        
+        <Text style={styles.footerText}>
+          Tap to explore the historical landmarks
+        </Text>
+        
+        <Text style={styles.tagline}>
+          A PLACE OF HEALING AND HOPE
+        </Text>
       </View>
     </View>
   );
@@ -71,13 +92,94 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 30,
+    paddingBottom: 80,
   },
-  estText: {
-    color: white, // Use your constant color
-    fontSize: 12,
-    opacity: 0.7,
-    fontFamily: 'inter', // Changed to Inter
-    marginBottom: 10,
+  buttonsContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    marginBottom: 40,
+  },
+  cathedral: {
+    position: 'relative',
+    width: 80,
+    height: 60,
+  },
+  leftTower: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    width: 20,
+    height: 40,
+    backgroundColor: 'white',
+  },
+  centerTower: {
+    position: 'absolute',
+    left: 25,
+    bottom: 0,
+    width: 20,
+    height: 50,
+    backgroundColor: 'white',
+  },
+  rightTower: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 20,
+    height: 40,
+    backgroundColor: 'white',
+  },
+  leftTowerTop: {
+    position: 'absolute',
+    left: 5,
+    bottom: 40,
+    width: 10,
+    height: 10,
+    backgroundColor: 'white',
+  },
+  centerTowerTop: {
+    position: 'absolute',
+    left: 30,
+    bottom: 50,
+    width: 10,
+    height: 10,
+    backgroundColor: 'white',
+  },
+  rightTowerTop: {
+    position: 'absolute',
+    right: 5,
+    bottom: 40,
+    width: 10,
+    height: 10,
+    backgroundColor: 'white',
+  },
+  cross: {
+    position: 'absolute',
+    left: 32,
+    bottom: 60,
+  },
+  crossVertical: {
+    width: 2,
+    height: 8,
+    backgroundColor: 'white',
+    position: 'absolute',
+    left: 2,
+  },
+  crossHorizontal: {
+    width: 6,
+    height: 2,
+    backgroundColor: 'white',
+    position: 'absolute',
+    top: 2,
+  },
+  base: {
+    position: 'absolute',
+    bottom: 0,
+    left: 10,
+    right: 10,
+    height: 8,
+    backgroundColor: 'white',
   },
   title: {
     fontSize: 28,
@@ -107,14 +209,12 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: white, // Use your constant color
     paddingHorizontal: 30,
-    paddingVertical: 14,
-    borderRadius: 30,
-    marginBottom: 0,
-    width: 240,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    elevation: 2,
+    paddingVertical: 15,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'white',
+    marginBottom: 16,
+    minWidth: 220,
   },
   buttonText: {
     color: primaryColor, // Use your constant color
