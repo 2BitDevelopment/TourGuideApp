@@ -1,12 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import {
-    collection,
-    doc,
-    DocumentData,
-    getDoc,
-    getDocs,
-    getFirestore,
-    QueryDocumentSnapshot
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore
 } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import { POI } from '../types/database';
@@ -44,7 +42,8 @@ export class DatabaseApi {
       const querySnapshot = await getDocs(POIItemsCollection);
 
       const POIs: POI[] = [];
-      querySnapshot.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
+      querySnapshot.forEach((doc) => {
+        console.log(doc.id, " => ", doc.data());
         const data = doc.data();
         POIs.push({
           id: doc.id,

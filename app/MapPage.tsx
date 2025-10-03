@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, Image, LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, Image, LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import DatabaseApi from '../services/DatabaseApi';
 
 type Marker = {
   id: number;
@@ -64,6 +65,9 @@ const MapPage = () => {
   // Edit mode for fine-tuning POI positions
   const [editMode, setEditMode] = useState<boolean>(false);
   const [editableId, setEditableId] = useState<number | null>(null);
+  
+  // Database test state
+  const [isTestingDB, setIsTestingDB] = useState<boolean>(false);
 
   // Determine nearest POI to user
   const nearestId = useMemo(() => {
@@ -91,6 +95,36 @@ const MapPage = () => {
   const moveUserTo = (xPixels: number, yPixels: number) => {
     if (mapSize.width <= 0 || mapSize.height <= 0) return;
     setUserPos({ x: xPixels / mapSize.width, y: yPixels / mapSize.height });
+  };
+
+  const testDatabase = async () => {
+    if (isTestingDB) return;
+    
+    setIsTestingDB(true);
+    try {
+      const allPOIs = await DatabaseApi.getAllPOIs();
+      console.log(`📊 Fetched ${allPOIs.length} POIs:`, allPOIs);
+      
+      // Test 2: Get specific POI if any exist
+      if (allPOIs.length > 0) {
+        console.log('📄 Testing getPOIById...');
+        const firstPOI = await DatabaseApi.getPOIById(allPOIs[0].id);
+        console.log('📄 Fetched specific POI:', firstPOI);
+      }
+      Alert.alert(
+        'Database Test Complete'
+      );
+      
+      } catch (error) {
+      console.error('Database test failed:', error);
+      Alert.alert(
+        'Database Test Failed',
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck console for details.`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsTestingDB(false);
+    }
   };
 
   // Request location and subscribe
@@ -183,6 +217,13 @@ const MapPage = () => {
 
       {/* Edit controls */}
       <View style={styles.editControls} pointerEvents="box-none">
+        <TouchableOpacity 
+          style={[styles.editButton, isTestingDB ? styles.editOn : undefined]} 
+          onPress={testDatabase}
+          disabled={isTestingDB}
+        >
+          <Text style={styles.editText}>{isTestingDB ? 'Testing...' : 'Test DB'}</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[styles.editButton, editMode ? styles.editOn : undefined]} onPress={() => setEditMode(v => !v)}>
           <Text style={styles.editText}>{editMode ? 'Editing' : 'Edit'}</Text>
         </TouchableOpacity>
