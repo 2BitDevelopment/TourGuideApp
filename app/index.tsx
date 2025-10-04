@@ -1,4 +1,5 @@
 import { black, primaryColor, white } from '@/constants/Colors';
+import { useNavigation } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import React from 'react';
 import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -82,9 +83,9 @@ const CathedralHomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: primaryColor, // Use your constant color
+    backgroundColor: primaryColor, 
     justifyContent: 'center',
-    shadowColor: black, // Use your constant color
+    shadowColor: black, 
     shadowOpacity: 0.1,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: white, // Use your constant color
+    color: white, 
     textAlign: 'center',
     fontFamily: 'serif',
     marginBottom: 18,
@@ -194,13 +195,13 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: white, // Use your constant color
+    color: white,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 38,
     opacity: 0.95,
     fontWeight: '400',
-    fontFamily: 'inter', // Changed to Inter
+    fontFamily: 'inter', 
   },
   buttonGroup: {
     width: '100%',
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   button: {
-    backgroundColor: white, // Use your constant color
+    backgroundColor: white,
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 25,
@@ -219,21 +220,20 @@ const styles = StyleSheet.create({
     minWidth: 220,
   },
   buttonText: {
-    color: primaryColor, // Use your constant color
+    color: primaryColor, 
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
-    fontFamily: 'inter', // Changed to Inter
+    fontFamily: 'inter',
     letterSpacing: 0.5,
   },
   arrow: {
     fontSize: 18,
     marginLeft: 8,
-    color: primaryColor, // Use your constant color
+    color: primaryColor, 
     fontWeight: 'bold',
-    fontFamily: 'inter', // Changed to Inter
+    fontFamily: 'inter', 
   },
 });
 
 export default CathedralHomePage;
-// ...existing code...
