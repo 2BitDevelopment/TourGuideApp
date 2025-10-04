@@ -1,12 +1,12 @@
 // Firebase configuration
 export const firebaseConfig = {
-  apiKey: process.env.apiKey,
-  authDomain: process.env.authDomain,
-  projectId: process.env.projectId,
-  storageBucket: process.env.storageBucket,
-  messagingSenderId: process.env.messagingSenderId,
-  appId: process.env.appId,
-  measurementId: process.env.measurementId
+  apiKey: process.env.EXPO_PUBLIC_apiKey,
+  authDomain: process.env.EXPO_PUBLIC_authDomain,
+  projectId: process.env.EXPO_PUBLIC_projectId,
+  storageBucket: process.env.EXPO_PUBLIC_storageBucket,
+  messagingSenderId: process.env.EXPO_PUBLIC_messagingSenderId,
+  appId: process.env.EXPO_PUBLIC_appId,
+  measurementId: process.env.EXPO_PUBLIC_measurementId
 };
 
 // Collection names

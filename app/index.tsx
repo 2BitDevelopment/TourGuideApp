@@ -3,6 +3,8 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+// require('dotenv').config();
+
 // Cathedral Icon Component
 const CathedralIcon = () => (
   <View style={{ alignItems: 'center', marginBottom: 20 }}>
