@@ -1,4 +1,5 @@
-import { black, primaryColor, white } from '@/constants/Colors';
+import { primaryColor, white } from '@/constants/Colors';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import React from 'react';
@@ -14,12 +15,7 @@ const CathedralIcon = () => (
       style={{ width: 140, height: 140, marginBottom: 10 }}
       resizeMode="contain"
     />
-    <Text style={styles.estText}>EST. 1848</Text>
   </View>
-);
-
-const Arrow = () => (
-  <Text style={styles.arrow}>{'\u2192'}</Text>
 );
 
 const CathedralHomePage = () => {
@@ -33,7 +29,7 @@ const CathedralHomePage = () => {
   };
 
   const handleDonate = () => {
-    const url = 'https://stgeorgescathedral.org.za/';
+    const url = 'https://sgcathedral.co.za/';
     Linking.openURL(url).catch(() => {
       console.warn('Unable to open donation link');
     });
@@ -53,10 +49,13 @@ const CathedralHomePage = () => {
           Cathedral is the oldest cathedral{'\n'}
           in Southern Africa.
         </Text>
-        
+
         <View style={styles.buttonsContainer}>
           <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
-            <Link style={styles.buttonText} href="/MapPage">Begin Virtual Tour</Link>
+            <Link style={styles.buttonText} href="/MapPage">
+              Begin Virtual Tour
+              <MaterialIcons name="arrow-forward" size={24} color={primaryColor} style={{ marginLeft: 10, textAlignVertical: 'center' }} />
+            </Link>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.button}>
@@ -64,17 +63,9 @@ const CathedralHomePage = () => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.button} onPress={handleDonate}>
-            <Text style={styles.buttonText}>Donate →</Text>
+            <Text style={styles.buttonText}>Donate</Text>
           </TouchableOpacity>
         </View>
-        
-        <Text style={styles.footerText}>
-          Tap to explore the historical landmarks
-        </Text>
-        
-        <Text style={styles.tagline}>
-          A PLACE OF HEALING AND HOPE
-        </Text>
       </View>
     </View>
   );
@@ -82,158 +73,76 @@ const CathedralHomePage = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 2,
     backgroundColor: primaryColor, 
     justifyContent: 'center',
-    shadowColor: black, 
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
+    alignItems: 'center',
   },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 30,
-    paddingBottom: 80,
+    paddingHorizontal: 30
   },
   buttonsContainer: {
     width: '100%',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    marginBottom: 40,
-  },
-  cathedral: {
-    position: 'relative',
-    width: 80,
-    height: 60,
-  },
-  leftTower: {
-    position: 'absolute',
-    left: 0,
-    bottom: 0,
-    width: 20,
-    height: 40,
-    backgroundColor: 'white',
-  },
-  centerTower: {
-    position: 'absolute',
-    left: 25,
-    bottom: 0,
-    width: 20,
-    height: 50,
-    backgroundColor: 'white',
-  },
-  rightTower: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 20,
-    height: 40,
-    backgroundColor: 'white',
-  },
-  leftTowerTop: {
-    position: 'absolute',
-    left: 5,
-    bottom: 40,
-    width: 10,
-    height: 10,
-    backgroundColor: 'white',
-  },
-  centerTowerTop: {
-    position: 'absolute',
-    left: 30,
-    bottom: 50,
-    width: 10,
-    height: 10,
-    backgroundColor: 'white',
-  },
-  rightTowerTop: {
-    position: 'absolute',
-    right: 5,
-    bottom: 40,
-    width: 10,
-    height: 10,
-    backgroundColor: 'white',
-  },
-  cross: {
-    position: 'absolute',
-    left: 32,
-    bottom: 60,
-  },
-  crossVertical: {
-    width: 2,
-    height: 8,
-    backgroundColor: 'white',
-    position: 'absolute',
-    left: 2,
-  },
-  crossHorizontal: {
-    width: 6,
-    height: 2,
-    backgroundColor: 'white',
-    position: 'absolute',
-    top: 2,
-  },
-  base: {
-    position: 'absolute',
-    bottom: 0,
-    left: 10,
-    right: 10,
-    height: 8,
-    backgroundColor: 'white',
+    alignItems: 'center'
   },
   title: {
-    fontSize: 28,
+    fontSize: 40,
     fontWeight: 'bold',
     color: white, 
     textAlign: 'center',
-    fontFamily: 'serif',
+    fontFamily: 'PlayfairDisplay-Black',
     marginBottom: 18,
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 20,
     color: white,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 28,
     marginBottom: 38,
     opacity: 0.95,
     fontWeight: '400',
-    fontFamily: 'inter', 
+    fontFamily: 'Inter-Regular', 
   },
   buttonGroup: {
     width: '100%',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 10,
+    gap: 16
   },
   button: {
     backgroundColor: white,
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: 'white',
     marginBottom: 16,
     minWidth: 220,
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   buttonText: {
     color: primaryColor, 
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '500',
     textAlign: 'center',
-    fontFamily: 'inter',
+    fontFamily: 'Inter-Regular',
     letterSpacing: 0.5,
-  },
-  arrow: {
-    fontSize: 18,
-    marginLeft: 8,
-    color: primaryColor, 
-    fontWeight: 'bold',
-    fontFamily: 'inter', 
-  },
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  }
 });
 
 export default CathedralHomePage;
