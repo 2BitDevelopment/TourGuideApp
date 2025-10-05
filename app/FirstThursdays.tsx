@@ -1,86 +1,149 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { black, primaryColor, surfaceColor, surfaceVariantColor, white } from '@/constants/Colors';
+import { MaterialIcons } from '@expo/vector-icons'; // Expo vector icons
 import { Link } from 'expo-router';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const FirstThursdays = () => {
   return (
     <View style={styles.container}>
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.backButton}>
+          <Link style={styles.backText} href="/">
+            <MaterialIcons name="arrow-back-ios" size={16} color={primaryColor} />
+            <Text style={styles.backTextLabel}>Back</Text>
+          </Link>
+        </TouchableOpacity>
+      </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.heading}>First Thursdays</Text>
 
         <View style={styles.cardLarge}>
-          <Text style={styles.cardTitle}>What is first Thursdays?</Text>
+          <Text style={styles.cardTitle}>First Thursday Offering:</Text>
           <View style={styles.bullets}>
-            <Text style={styles.bullet}>• Monthly late-night art walk.</Text>
-            <Text style={styles.bullet}>• St George's: mini tours, organ sets.</Text>
-            <Text style={styles.bullet}>• Add bookshop, quiet space, coffee.</Text>
+            <Text style={styles.bullet}>• Open from 5pm-8pm</Text>
+            <Text style={styles.bullet}>• St George’s Marimba Team</Text>
+            <Text style={styles.bullet}>
+              • Explore the history alongside other art expeditions in Cape Town
+            </Text>
           </View>
         </View>
 
         <View style={styles.cardSmall}>
-          <Text style={styles.smallTitle}>First Thursday Offering:</Text>
-          <View style={styles.bullets}>
-            <Text style={styles.bullet}>• Monthly late-night art walk.</Text>
-            <Text style={styles.bullet}>• Mini tours; organ sets.</Text>
-            <Text style={styles.bullet}>• Bookshop, quiet space, coffee.</Text>
-          </View>
+          <Text style={styles.smallTitle}>Latest Events</Text>
+          <Link style={styles.eventLink} href="https://www.first-thursdays.co.za/programme/first-thursdays-at-st-georges-cathedral">
+            Link to First Thursdays
+          </Link>
         </View>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.backButton}>
-          <Link style={styles.backText} href="/">Back home</Link>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
-  scroll: { padding: 24, paddingBottom: 120 },
+  container: { flex: 1, backgroundColor: surfaceColor },
+  scroll: {
+    padding: 24,
+    paddingBottom: 120,
+    paddingTop: 60, // Move content lower
+  },
   heading: {
-    fontSize: 28,
-    color: '#b61f24',
+    fontSize: 32,
+    color: primaryColor,
     fontWeight: '700',
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 24,
+    fontFamily: 'Inter-Medium', // Use Inter font
+    letterSpacing: 1,
   },
   cardLarge: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: primaryColor,
+    backgroundColor: surfaceVariantColor,
     padding: 20,
-    marginBottom: 16,
+    marginBottom: 18,
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
   cardSmall: {
-    borderRadius: 16,
-    backgroundColor: '#b61f24',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: primaryColor,
+    backgroundColor: white,
     padding: 20,
-    marginBottom: 16,
+    marginBottom: 18,
+    alignItems: 'center',
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
   },
-  cardTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
-  smallTitle: { fontSize: 16, fontWeight: '700', color: 'white', marginBottom: 12 },
-  bullets: { gap: 6 },
-  bullet: { fontSize: 14, color: '#111827' },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: primaryColor,
+    textAlign: 'left',
+    fontFamily: 'Inter-Medium',
+  },
+  smallTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: primaryColor,
+    marginBottom: 12,
+    textAlign: 'center',
+    fontFamily: 'Inter-Medium',
+  },
+  bullets: { gap: 8 },
+  bullet: { fontSize: 18, color: black, marginBottom: 2, fontFamily: 'Inter-Regular' },
+  eventLink: {
+    color: '#1d4ed8',
+    fontSize: 16,
+    textDecorationLine: 'underline',
+    fontWeight: '500',
+    marginTop: 6,
+    textAlign: 'center',
+    fontFamily: 'Inter-Medium',
+  },
   footer: {
     position: 'absolute',
-    bottom: 20,
+    top: 20,
     left: 24,
-    right: 24,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    zIndex: 10,
   },
   backButton: {
-    backgroundColor: '#f3f4f6',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    backgroundColor: white,
+    borderColor: primaryColor,
+    borderWidth: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 999,
-    minWidth: 200,
+    minWidth: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#b61f24',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
   },
-  backText: { textAlign: 'center', color: '#111827', fontSize: 16, fontWeight: '600' },
+  backText: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    color: primaryColor,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+  },
+  backTextLabel: {
+    color: primaryColor,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+    marginLeft: 2,
+  },
 });
 
 export default FirstThursdays;
-
-

@@ -6,7 +6,13 @@ import React from 'react';
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'Inter-Regular': require('../assets/fonts/Inter-Regular.otf'),
+    'Inter-Medium': require('../assets/fonts/Inter-Medium.otf'),
+    'Inter-Bold': require('../assets/fonts/Inter-Bold.otf'),
+    'PlayfairDisplay-Regular': require('../assets/fonts/PlayfairDisplay-Regular.ttf'),
+    'PlayfairDisplay-Bold': require('../assets/fonts/PlayfairDisplay-Bold.ttf'),
+    'PlayfairDisplay-Black': require('../assets/fonts/PlayfairDisplay-Black.ttf'),
+    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
   if (!loaded) {
