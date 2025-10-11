@@ -67,6 +67,7 @@ export class DatabaseApi {
           id: doc.id,
           title: data.title || '',
           text: data.text || '',
+          text2: data.text2 || '',
           location: {
             latitude: data.location?.latitude || 0,
             longitude: data.location?.longitude || 0,
@@ -103,6 +104,7 @@ export class DatabaseApi {
           id: docSnap.id,
           title: data.title || '',
           text: data.text || '',
+          text2: data.text2 || '',
           location: {
             latitude: data.location?.latitude || 0,
             longitude: data.location?.longitude || 0,

@@ -28,24 +28,16 @@ const MapPage = () => {
   const scale = useRef(new Animated.Value(2)).current; // Start with 2x zoom
   const lastPan = useRef({ x: 0, y: 0 });
   const lastScale = useRef(2);
-
-
-  
-
-  
+ 
   // Database POIs state
   const [dbPOIs, setDbPOIs] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState<boolean>(false);
   const [poiImages, setPOIImages] = useState<Map<string, string>>(new Map());
 
-
-
   const onMapLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setMapSize({ width, height });
   };
-
-
 
   // Pan responder for handling pan and zoom gestures
   const panResponder = PanResponder.create({
