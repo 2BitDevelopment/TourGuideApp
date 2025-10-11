@@ -9,6 +9,7 @@ export interface POI {
   id: string;
   title: string;
   text: string;
+  text2: string;
   location: Location;
   description: string;
   imageID: string;
