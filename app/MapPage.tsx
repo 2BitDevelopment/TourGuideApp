@@ -31,11 +31,11 @@ const MapPage = () => {
   const scale = useRef(new Animated.Value(2)).current; // Start with 2x zoom
   const lastPan = useRef({ x: 0, y: 0 });
   const lastScale = useRef(2);
- 
+
   // Database POIs state
   const [dbPOIs, setDbPOIs] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState<boolean>(false);
-  
+
   // Image loading hook
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
 
@@ -67,12 +67,12 @@ const MapPage = () => {
       if (evt.nativeEvent.touches.length === 2) {
         const touch1 = evt.nativeEvent.touches[0];
         const touch2 = evt.nativeEvent.touches[1];
-        
+
         const distance = Math.sqrt(
-          Math.pow(touch2.pageX - touch1.pageX, 2) + 
+          Math.pow(touch2.pageX - touch1.pageX, 2) +
           Math.pow(touch2.pageY - touch1.pageY, 2)
         );
-        
+
         // Simple pinch-to-zoom implementation
         const normalizedDistance = distance / 200; // Normalize distance
         const newScale = Math.max(0.5, Math.min(4, lastScale.current * normalizedDistance / 2));
@@ -86,21 +86,19 @@ const MapPage = () => {
     },
     onPanResponderRelease: (evt, gestureState) => {
       pan.flattenOffset();
-      
+
       // Clean up listeners to prevent memory leaks
       pan.removeAllListeners();
       scale.removeAllListeners();
-      
+
       // Update stored values
       pan.addListener((value) => {
         lastPan.current = value;
       });
-      
+
       scale.addListener((value) => {
         lastScale.current = value.value;
       });
-
-      // Tap handling removed - no user position to update
     },
   });
 
@@ -118,7 +116,7 @@ const MapPage = () => {
         useNativeDriver: false,
       }),
     ]).start();
-    
+
     lastPan.current = { x: 0, y: 0 };
     lastScale.current = 2;
   };
@@ -161,19 +159,19 @@ const MapPage = () => {
   // Load POIs from database
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
-    
+
     setLoadingPOIs(true);
     try {
       console.log('Loading POIs with images from database...');
       const pois = await DatabaseApi.getAllPOIsWithImages();
       console.log(`Loaded ${pois.length} POIs with images from database`);
-      
+
       setDbPOIs(pois);
-      
+
     } catch (error) {
       console.error('Failed to load POIs:', error);
       Alert.alert(
-        'Error Loading POIs', 
+        'Error Loading POIs',
         'Failed to load points of interest from the database. Please check your connection and try again.'
       );
     } finally {
@@ -208,8 +206,6 @@ const MapPage = () => {
 
   // Selected marker for bottom sheet
   const selectedMarker = useMemo(() => allMarkers.find(m => m.id === sheetId) ?? null, [sheetId, allMarkers]);
-
-
 
   // Load POIs from database on component mount
   useEffect(() => {
@@ -278,8 +274,8 @@ const MapPage = () => {
 
       {/* Database controls */}
       <View style={styles.editControls} pointerEvents="box-none">
-        <TouchableOpacity 
-          style={[styles.editButton, loadingPOIs || isLoadingImages ? styles.editOn : undefined]} 
+        <TouchableOpacity
+          style={[styles.editButton, loadingPOIs || isLoadingImages ? styles.editOn : undefined]}
           onPress={loadPOIsFromDatabase}
           disabled={loadingPOIs || isLoadingImages}
         >
@@ -290,11 +286,11 @@ const MapPage = () => {
       </View>
 
       {/* Zoom controls */}
-      <View 
+      <View
         style={[
-          styles.zoomControls, 
+          styles.zoomControls,
           selectedMarker && { bottom: '65%' } // Move up when bottom sheet is open
-        ]} 
+        ]}
         pointerEvents="box-none"
       >
         <TouchableOpacity style={styles.zoomButton} onPress={zoomIn}>
@@ -317,9 +313,9 @@ const MapPage = () => {
               <Text style={styles.sheetIndex}>{selectedMarker.id}</Text>
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
             </View>
-            <POIImage 
-              imageID={selectedMarker.imageID} 
-              style={styles.sheetImage} 
+            <POIImage
+              imageID={selectedMarker.imageID}
+              style={styles.sheetImage}
               fallbackSource={fallbackImg}
               resizeMode="cover"
             />
@@ -353,37 +349,191 @@ const MapPage = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f3f4f6' },
-  header: { alignItems: 'center', paddingTop: 16, paddingBottom: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  brand: { color: '#b61f24', fontSize: 24, fontWeight: '800', textAlign: 'center' },
-  mapArea: { flex: 1, backgroundColor: '#f3f4f6', position: 'relative', overflow: 'hidden' },
-  mapContent: { flex: 1, width: '100%', height: '100%' },
-  floor: { ...StyleSheet.absoluteFillObject },
-  editControls: { position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 8 },
-  editButton: { backgroundColor: 'rgba(0,0,0,0.5)', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
-  editOn: { backgroundColor: '#b61f24' },
-  editText: { color: 'white', fontWeight: '700' },
-  zoomControls: { position: 'absolute', bottom: 12, right: 12, flexDirection: 'column', gap: 8 },
-  zoomButton: { backgroundColor: 'rgba(0,0,0,0.7)', width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } },
-  zoomButtonText: { color: 'white', fontSize: 20, fontWeight: '700' },
-  resetButtonText: { color: 'white', fontSize: 16, fontWeight: '700' },
-  pin: { position: 'absolute', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', transform: [{ translateX: -14 }, { translateY: -14 }] },
-  pinText: { color: 'white', fontWeight: '700', fontSize: 12 },
-  sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, top: '40%', backgroundColor: 'white', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: -2 } },
-  sheetHandle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', marginBottom: 8 },
-  sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  sheetIndex: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#b61f24', color: 'white', textAlign: 'center', textAlignVertical: 'center', fontWeight: '700', marginRight: 8 },
-  sheetTitle: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 8 },
-  sheetImage: { width: '100%', height: 200, borderRadius: 12, marginBottom: 12 },
-  sheetBody: { fontSize: 14, color: '#374151', lineHeight: 20, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#b61f24', marginBottom: 6 },
-  sheetFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  pillButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 999 },
-  pillText: { fontSize: 14, fontWeight: '700' },
-  pillGhost: { backgroundColor: '#f3f4f6' },
-  pillGhostText: { color: '#111827' },
-  pillPrimary: { backgroundColor: '#b61f24' },
-  pillPrimaryText: { color: 'white' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f3f4f6' 
+  },
+  header: { 
+    alignItems: 'center', 
+    paddingTop: 16, 
+    paddingBottom: 8, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#e5e7eb' 
+  },
+  brand: { 
+    color: '#b61f24', 
+    fontSize: 24, 
+    fontWeight: '800', 
+    textAlign: 'center' 
+  },
+  mapArea: { 
+    flex: 1, 
+    backgroundColor: '#f3f4f6', 
+    position: 'relative', 
+    overflow: 'hidden' 
+  },
+  mapContent: { 
+    flex: 1, 
+    width: '100%', 
+    height: '100%' 
+  },
+  floor: { 
+    ...StyleSheet.absoluteFillObject 
+  },
+  editControls: { 
+    position: 'absolute', 
+    top: 12, 
+    right: 12, 
+    flexDirection: 'row', 
+    gap: 8 
+  },
+  editButton: { 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    paddingVertical: 6, 
+    paddingHorizontal: 10, 
+    borderRadius: 8 
+  },
+  editOn: { 
+    backgroundColor: '#b61f24' 
+  },
+  editText: { 
+    color: 'white', 
+    fontWeight: '700' 
+  },
+  zoomControls: { 
+    position: 'absolute', 
+    bottom: 12, 
+    right: 12, 
+    flexDirection: 'column', 
+    gap: 8 
+  },
+  zoomButton: { 
+    backgroundColor: 'rgba(0,0,0,0.7)', 
+    width: 44, 
+    height: 44, 
+    borderRadius: 22, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    shadowColor: '#000', 
+    shadowOpacity: 0.2, 
+    shadowRadius: 3, 
+    shadowOffset: { width: 0, height: 2 } 
+  },
+  zoomButtonText: { 
+    color: 'white', 
+    fontSize: 20, 
+    fontWeight: '700' 
+  },
+  resetButtonText: { 
+    color: 'white', 
+    fontSize: 16, 
+    fontWeight: '700' 
+  },
+  pin: { 
+    position: 'absolute', 
+    width: 28, 
+    height: 28, 
+    borderRadius: 14, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    transform: [{ translateX: -14 }, { translateY: -14 }] 
+  },
+  pinText: { 
+    color: 'white', 
+    fontWeight: '700', 
+    fontSize: 12 
+  },
+  sheet: { 
+    position: 'absolute', 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    top: '40%', 
+    backgroundColor: 'white', 
+    borderTopLeftRadius: 16, 
+    borderTopRightRadius: 16, 
+    padding: 16, 
+    shadowColor: '#000', 
+    shadowOpacity: 0.1, 
+    shadowRadius: 8, 
+    shadowOffset: { width: 0, height: -2 } 
+  },
+  sheetHandle: { 
+    alignSelf: 'center', 
+    width: 36, 
+    height: 4, 
+    borderRadius: 2, 
+    backgroundColor: '#e5e7eb', 
+    marginBottom: 8 
+  },
+  sheetHeaderRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 8 
+  },
+  sheetIndex: { 
+    width: 26, 
+    height: 26, 
+    borderRadius: 13, 
+    backgroundColor: '#b61f24', 
+    color: 'white', 
+    textAlign: 'center', 
+    textAlignVertical: 'center', 
+    fontWeight: '700', 
+    marginRight: 8 
+  },
+  sheetTitle: { 
+    fontSize: 22, 
+    fontWeight: '800', 
+    color: '#111827', 
+    marginBottom: 8 
+  },
+  sheetImage: { 
+    width: '100%', 
+    height: 200, 
+    borderRadius: 12, 
+    marginBottom: 12 
+  },
+  sheetBody: { 
+    fontSize: 14, 
+    color: '#374151', 
+    lineHeight: 20, 
+    marginBottom: 12 
+  },
+  sectionTitle: { 
+    fontSize: 16, 
+    fontWeight: '800', 
+    color: '#b61f24', 
+    marginBottom: 6 
+  },
+  sheetFooter: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginTop: 8 
+  },
+  pillButton: { 
+    paddingVertical: 10, 
+    paddingHorizontal: 16, 
+    borderRadius: 999 
+  },
+  pillText: { 
+    fontSize: 14, 
+    fontWeight: '700' 
+  },
+  pillGhost: { 
+    backgroundColor: '#f3f4f6' 
+  },
+  pillGhostText: { 
+    color: '#111827' 
+  },
+  pillPrimary: { 
+    backgroundColor: '#b61f24' 
+  },
+  pillPrimaryText: { 
+    color: 'white' 
+  },
 });
 
 export default MapPage;
