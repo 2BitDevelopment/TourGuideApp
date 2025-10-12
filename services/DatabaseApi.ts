@@ -144,9 +144,129 @@ export class DatabaseApi {
       
       return downloadURL;
     } catch (error) {
-      console.error('Error loading image:', error);
+      console.error(`Error loading image ${imageID}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Loads multiple images in parallel from Firebase Storage
+   * @param imageIDs - Array of image IDs/paths in Firebase Storage
+   * @returns Promise<Map<string, string | null>>
+   */
+  async loadImages(imageIDs: string[]): Promise<Map<string, string | null>> {
+    const results = new Map<string, string | null>();
+    
+    if (!imageIDs || imageIDs.length === 0) {
+      return results;
+    }
+
+    // Filter out empty imageIDs and get uncached ones
+    const validImageIDs = imageIDs.filter(id => id && id.trim());
+    const uncachedImageIDs = validImageIDs.filter(id => !this.imageCache.has(id));
+    
+    // Add cached results first
+    validImageIDs.forEach(id => {
+      if (this.imageCache.has(id)) {
+        results.set(id, this.imageCache.get(id)!);
+      }
+    });
+
+    if (uncachedImageIDs.length === 0) {
+      return results;
+    }
+
+    // Load uncached images in parallel
+    const loadPromises = uncachedImageIDs.map(async (imageID) => {
+      try {
+        const imageRef = ref(storage, `${STORAGE_PATHS.IMAGES}${imageID}`);
+        const downloadURL = await getDownloadURL(imageRef);
+        
+        // Cache the successful result
+        this.imageCache.set(imageID, downloadURL);
+        return { imageID, url: downloadURL };
+      } catch (error) {
+        console.error(`Error loading image ${imageID}:`, error);
+        return { imageID, url: null };
+      }
+    });
+
+    const loadedResults = await Promise.all(loadPromises);
+    
+    // Add newly loaded results to the map
+    loadedResults.forEach(({ imageID, url }) => {
+      results.set(imageID, url);
+    });
+
+    return results;
+  }
+
+  /**
+   * Preloads images for all POIs
+   * @param pois - Array of POI objects
+   * @returns Promise<Map<string, string | null>>
+   */
+  async preloadPOIImages(pois: POI[]): Promise<Map<string, string | null>> {
+    const imageIDs = pois
+      .map(poi => poi.imageID)
+      .filter(imageID => imageID && imageID.trim());
+    
+    return this.loadImages(imageIDs);
+  }
+
+  /**
+   * Retrieves all POIs with their images preloaded
+   * @returns Promise<POI[]> with images loaded in parallel
+   */
+  async getAllPOIsWithImages(): Promise<POI[]> {
+    try {
+      // Get POIs first
+      const pois = await this.getAllPOIs();
+      
+      if (pois.length === 0) {
+        return pois;
+      }
+
+      // Preload all images in parallel
+      console.log(`Preloading images for ${pois.length} POIs...`);
+      await this.preloadPOIImages(pois);
+      console.log('Image preloading completed');
+
+      return pois;
+    } catch (error) {
+      console.error('Error fetching POIs with images:', error);
+      throw new Error('Failed to fetch POIs with images');
+    }
+  }
+
+  /**
+   * Gets the cached image URL for a POI
+   * @param imageID - The image ID/path in Firebase Storage
+   * @returns string | null - The cached URL or null if not cached
+   */
+  getCachedImageUrl(imageID: string): string | null {
+    if (!imageID) return null;
+    return this.imageCache.get(imageID) || null;
+  }
+
+  /**
+   * Checks if an image is cached
+   * @param imageID - The image ID/path in Firebase Storage
+   * @returns boolean
+   */
+  isImageCached(imageID: string): boolean {
+    return this.imageCache.has(imageID);
+  }
+
+  /**
+   * Gets cache statistics
+   * @returns object with cache information
+   */
+  getCacheStats() {
+    return {
+      size: this.imageCache.size,
+      keys: Array.from(this.imageCache.keys()),
+    };
   }
 
   /**

@@ -17,6 +17,6 @@ export const COLLECTIONS = {
 
 // Storage paths
 export const STORAGE_PATHS = {
-  IMAGES: 'images/',
+  IMAGES: '',
   THUMBNAILS: 'thumbnails/'
 } as const;

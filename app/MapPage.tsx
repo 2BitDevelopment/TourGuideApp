@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, Image, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { POIImage } from '../components/POIImage';
+import { useImageLoading } from '../hooks/useImageLoading';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
 
 type Marker = {
@@ -8,6 +10,7 @@ type Marker = {
   y: number; // percentage 0..1 down map area
   title: string;
   image?: any;
+  imageID?: string; // Firebase storage image ID
   blurb?: string;
   history?: string;
   isPOI?: boolean; // Flag for database POIs
@@ -32,7 +35,9 @@ const MapPage = () => {
   // Database POIs state
   const [dbPOIs, setDbPOIs] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState<boolean>(false);
-  const [poiImages, setPOIImages] = useState<Map<string, string>>(new Map());
+  
+  // Image loading hook
+  const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
 
   const onMapLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -159,26 +164,11 @@ const MapPage = () => {
     
     setLoadingPOIs(true);
     try {
-      console.log('Loading POIs from database...');
-      const pois = await DatabaseApi.getAllPOIs();
-      console.log(`Loaded ${pois.length} POIs from database`);
+      console.log('Loading POIs with images from database...');
+      const pois = await DatabaseApi.getAllPOIsWithImages();
+      console.log(`Loaded ${pois.length} POIs with images from database`);
       
       setDbPOIs(pois);
-      
-      // Load images for each POI
-      //TODO
-      // for (const poi of pois) {
-      //   if (poi.imageID) {
-      //     try {
-      //       const imageUrl = await DatabaseApi.loadImage(poi.imageID);
-      //       if (imageUrl) {
-      //         setPOIImages(prev => new Map(prev.set(poi.id, imageUrl)));
-      //       }
-      //     } catch (error) {
-      //       console.error(`Failed to load image for POI ${poi.id}:`, error);
-      //     }
-      //   }
-      // }
       
     } catch (error) {
       console.error('Failed to load POIs:', error);
@@ -195,6 +185,7 @@ const MapPage = () => {
   const databaseMarkers = useMemo(() => {
     return dbPOIs.map((poi, index) => {
       const coords = convertLocationToMapCoords(poi.location.latitude, poi.location.longitude);
+      const imageUrl = imageUrls.get(poi.imageID);
       return {
         id: parseInt(poi.id) || (1000 + index), // Use POI id if numeric, otherwise generate one
         x: coords.x,
@@ -202,12 +193,13 @@ const MapPage = () => {
         title: poi.title,
         blurb: poi.text || poi.description,
         history: poi.description,
-        image: poiImages.get(poi.id) ? { uri: poiImages.get(poi.id) } : fallbackImg,
+        image: imageUrl ? { uri: imageUrl } : fallbackImg,
+        imageID: poi.imageID, // Store imageID for POIImage component
         isPOI: true, // Flag to distinguish from seed markers
         poiData: poi // Store original POI data
       };
     });
-  }, [dbPOIs, poiImages]);
+  }, [dbPOIs, imageUrls]);
 
   // Use only database markers
   const allMarkers = useMemo(() => {
@@ -287,11 +279,13 @@ const MapPage = () => {
       {/* Database controls */}
       <View style={styles.editControls} pointerEvents="box-none">
         <TouchableOpacity 
-          style={[styles.editButton, loadingPOIs ? styles.editOn : undefined]} 
+          style={[styles.editButton, loadingPOIs || isLoadingImages ? styles.editOn : undefined]} 
           onPress={loadPOIsFromDatabase}
-          disabled={loadingPOIs}
+          disabled={loadingPOIs || isLoadingImages}
         >
-          <Text style={styles.editText}>{loadingPOIs ? 'Loading...' : `POIs (${dbPOIs.length})`}</Text>
+          <Text style={styles.editText}>
+            {loadingPOIs ? 'Loading POIs...' : isLoadingImages ? 'Loading Images...' : `POIs (${dbPOIs.length})`}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -323,7 +317,12 @@ const MapPage = () => {
               <Text style={styles.sheetIndex}>{selectedMarker.id}</Text>
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
             </View>
-            <Image source={selectedMarker.image ?? fallbackImg} style={styles.sheetImage} resizeMode="cover" />
+            <POIImage 
+              imageID={selectedMarker.imageID} 
+              style={styles.sheetImage} 
+              fallbackSource={fallbackImg}
+              resizeMode="cover"
+            />
             <Text style={styles.sheetBody}>{selectedMarker.blurb}</Text>
             <Text style={styles.sectionTitle}>Historical Significance</Text>
             <Text style={styles.sheetBody}>{selectedMarker.history}</Text>

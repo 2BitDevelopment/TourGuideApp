@@ -37,3 +37,24 @@ export interface ImageLoadingState {
   url: string | null;
   error: string | null;
 }
+
+// Enhanced POI with image URL
+export interface POIWithImage extends POI {
+  imageUrl?: string | null;
+}
+
+// Image cache result
+export interface ImageCacheResult {
+  imageID: string;
+  url: string | null;
+  error?: string;
+}
+
+// Batch image loading result
+export interface BatchImageLoadResult {
+  success: Map<string, string>;
+  failed: Map<string, string>;
+  total: number;
+  successCount: number;
+  failedCount: number;
+}
