@@ -1,3 +1,6 @@
+//Home Page of the App
+//Three Buttons: Begin Virtual Tour, First Thursdays, Donate
+
 import { primaryColor, white } from '@/constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +22,7 @@ const CathedralIcon = () => (
 );
 
 const CathedralHomePage = () => {
+
   const navigation = useNavigation<any>();
   const handleVirtualTour = () => {
     // Handle virtual tour navigation
@@ -28,6 +32,7 @@ const CathedralHomePage = () => {
     console.log('Starting virtual tour...');
   };
 
+  //Donate button link to St Georges Cathedral website
   const handleDonate = () => {
     const url = 'https://sgcathedral.co.za/';
     Linking.openURL(url).catch(() => {
@@ -114,13 +119,14 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: white,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 24,
+    borderRadius: 26,
     borderWidth: 1,
     borderColor: 'white',
     marginBottom: 16,
-    minWidth: 220,
+    minWidth: 260,
+    minHeight: 54,
     shadowColor: 'black',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -135,7 +141,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: primaryColor, 
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
     fontFamily: 'Inter-Regular',
     letterSpacing: 0.5,

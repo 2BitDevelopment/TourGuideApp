@@ -12,7 +12,6 @@ export default function RootLayout() {
     'PlayfairDisplay-Regular': require('../assets/fonts/PlayfairDisplay-Regular.ttf'),
     'PlayfairDisplay-Bold': require('../assets/fonts/PlayfairDisplay-Bold.ttf'),
     'PlayfairDisplay-Black': require('../assets/fonts/PlayfairDisplay-Black.ttf'),
-    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
   if (!loaded) {
