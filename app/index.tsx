@@ -34,7 +34,7 @@ const CathedralHomePage = () => {
 
   //Donate button link to St Georges Cathedral website
   const handleDonate = () => {
-    const url = 'https://sgcathedral.co.za/';
+    const url = 'https://sgcathedral.co.za/donate-now/';
     Linking.openURL(url).catch(() => {
       console.warn('Unable to open donation link');
     });
