@@ -253,13 +253,17 @@ const MapPage = () => {
 
   // Convert database POIs to map markers
   const databaseMarkers = useMemo(() => {
-    return dbPOIs.map((poi, index) => {
+    // Sort POIs by their ID to ensure ascending order
+    const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
+    
+    return sortedPOIs.map((poi, index) => {
       // Use precise map coordinates instead of lat/lng conversion
-      const coords = getPOIMapCoordinates(poi.id);
+      const coords = getPOIMapCoordinates(poi.id); 
       const imageUrl = imageUrls.get(poi.imageID);
       
       return {
-        id: poi.id, 
+        id: index + 1, 
+        originalId: poi.id, 
         x: coords.x,
         y: coords.y,
         title: poi.title,
@@ -339,7 +343,9 @@ const MapPage = () => {
           </TouchableOpacity>
           <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
           <TouchableOpacity style={styles.helpButton}>
-            <Text style={styles.helpButtonText}>?</Text>
+            <Link href="/help" style={styles.helpButtonLink}>
+              <Text style={styles.helpButtonText}>?</Text>
+            </Link>
           </TouchableOpacity>
       </View>
 
@@ -503,7 +509,7 @@ const MapPage = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FFF8F7', // Warm, church-appropriate background
+    backgroundColor: '#FFFFFF', 
   },
   header: { 
     flexDirection: 'row',
@@ -552,13 +558,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  helpButtonLink: {
+    flex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   helpButtonText: {
     color: 'white',
     fontSize: 20,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 44,
+    marginHorizontal: 10,
   },
   brand: { 
     color: '#8F000D', 
@@ -571,7 +583,7 @@ const styles = StyleSheet.create({
   },
   mapArea: { 
     flex: 1, 
-    backgroundColor: '#FFF8F7', 
+    backgroundColor: '#FFFFFF', 
     position: 'relative', 
     overflow: 'hidden' 
   },

@@ -1,4 +1,4 @@
-import { black, primaryColor, surfaceColor, surfaceVariantColor } from '@/constants/Colors';
+import { black, primaryColor, secondaryColor, surfaceColor, surfaceVariantColor } from '@/constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
@@ -19,24 +19,34 @@ const FirstThursdays = () => {
 </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>First Thursdays</Text>
+        <View style={styles.contentContainer}>
+          <Text style={styles.heading}>First Thursdays</Text>
 
-        <View style={styles.cardLarge}>
-          <Text style={styles.cardTitle}>What's happening?</Text>
-          <View style={styles.bullets}>
-            <Text style={styles.bullet}>• Open from 5pm-8pm</Text>
-            <Text style={styles.bullet}>• St George’s Marimba Team Performances</Text>
-            <Text style={styles.bullet}>
-              • Explore the history alongside other art expeditions in Cape Town
-            </Text>
+          <View style={styles.cardLarge}>
+            <Text style={styles.cardTitle}>What's happening?</Text>
+            <View style={styles.bullets}>
+              <Text style={styles.bullet}>• Open from 5pm-8pm</Text>
+              <Text style={styles.bullet}>• St George's Marimba Team Performances</Text>
+              <Text style={styles.bullet}>
+                • Explore the history alongside other art expeditions in Cape Town
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.cardSmall}>
+            <Text style={styles.smallTitle}>Latest Events</Text>
+            <Text style={styles.subtitle}>Want to know more about what First Thursdays is all about?</Text>
+            <Link href="https://www.first-thursdays.co.za/programme/first-thursdays-at-st-georges-cathedral" asChild>
+              <TouchableOpacity style={styles.eventButton}>
+                <Text style={styles.eventButtonText}>Learn more</Text>
+              </TouchableOpacity>
+            </Link>
           </View>
         </View>
 
-        <View style={styles.cardSmall}>
-          <Text style={styles.smallTitle}>Latest Events</Text>
-          <Link style={styles.eventLink} href="https://www.first-thursdays.co.za/programme/first-thursdays-at-st-georges-cathedral">
-            More about First Thursdays
-          </Link>
+        <View style={styles.churchFooter}>
+          <Text style={styles.footerText}>St. George's Cathedral</Text>
+          <Text style={styles.footerSubtext}>The People's Cathedral</Text>
         </View>
       </ScrollView>
     </View>
@@ -50,14 +60,26 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     paddingTop: 60, // Move content lower
   },
+  contentContainer: {
+    backgroundColor: surfaceColor,
+    borderRadius: 24,
+    padding: 20,
+    marginHorizontal: 8,
+    marginTop: 50,
+    shadowColor: primaryColor,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 18,
+  },
   heading: {
     fontSize: 32,
     color: primaryColor,
     fontWeight: '700',
     textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 24,
-    fontFamily: 'PlayfairDisplay-Black',
+    marginTop: 10,
+    marginBottom: 25,
+    fontFamily: 'PlayfairDisplay-Bold',
     letterSpacing: 1,
   },
   cardLarge: {
@@ -73,7 +95,9 @@ const styles = StyleSheet.create({
   },
   cardSmall: {
     borderRadius: 20,
+    borderWidth: 2,
     backgroundColor: surfaceColor,
+    borderColor: primaryColor,
     padding: 20,
     marginBottom: 18,
     alignItems: 'center',
@@ -90,23 +114,63 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
   },
   smallTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '700',
     color: primaryColor,
     marginBottom: 12,
     textAlign: 'center',
     fontFamily: 'Inter-Medium',
   },
-  bullets: { gap: 8 },
-  bullet: { fontSize: 18, color: black, marginBottom: 2, fontFamily: 'Inter-Regular' },
-  eventLink: {
-    color: '#1d4ed8',
-    fontSize: 16,
-    textDecorationLine: 'underline',
-    fontWeight: '500',
-    marginTop: 6,
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: secondaryColor,
+    marginBottom: 2,
     textAlign: 'center',
     fontFamily: 'Inter-Medium',
+  },
+  bullets: { gap: 8 },
+  bullet: { fontSize: 18, color: black, marginBottom: 2, fontFamily: 'Inter-Regular' },
+  eventButton: {
+    backgroundColor: primaryColor,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    marginTop: 8,
+    shadowColor: primaryColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  eventButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: 'Inter-Medium',
+  },
+  churchFooter: {
+    marginTop: 130,
+    paddingTop: 20,
+    paddingHorizontal: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#FFDAD6',
+    alignItems: 'center',
+    backgroundColor: surfaceColor,
+  },
+  footerText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: primaryColor,
+    fontFamily: 'PlayfairDisplay-Bold',
+    marginBottom: 4,
+  },
+  footerSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Inter-Regular',
+    fontStyle: 'italic',
   },
   footer: {
     position: 'absolute',

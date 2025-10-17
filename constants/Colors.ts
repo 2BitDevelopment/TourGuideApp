@@ -6,6 +6,7 @@
 export const tintColorLight = '#0a7ea4';
 export const tintColorDark = '#fff';
 export const primaryColor = '#8F000D';
+export const secondaryColor = '#OOOOOO';
 export const surfaceColor = '#FFF8F7';
 export const surfaceVariantColor = '#FFDAD6';
 export const black = '#000000';
