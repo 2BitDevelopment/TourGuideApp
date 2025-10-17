@@ -5,9 +5,14 @@ on:
   push:
     branches:
       - main
+      - Kevin_code
+      - James
+      - Weylin_code
+      - emil_code
   pull_request:
     branches:
       - main
+      
   workflow_dispatch:
 
 # What tasks to run
