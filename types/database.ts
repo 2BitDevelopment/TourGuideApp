@@ -1,12 +1,12 @@
 // Database API Types
 export interface Location {
-  latitude: number;
-  longitude: number;
+  //latitude: number;
+  //longitude: number;
   name?: string;
 }
 
 export interface POI {
-  id: string;
+  id: number;
   title: string;
   text: string;
   text2: string;

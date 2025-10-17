@@ -114,26 +114,27 @@ const MapPage = () => {
     },
   });
 
-  // Sheet pan responder for drag-to-dismiss
-  const sheetPanResponder = PanResponder.create({
+  /* 
+  So this method is for the poi pop up slide up and down functionality
+  it is a pan responder that is used to drag the sheet up and down.
+  How it works:  Touch starts, onMoveShouldSetPanResponder checks if it's a downward swipe
+                 User drags, onPanResponderMove moves the sheet down by gestureState.dy pixels
+                 User releases, onPanResponderRelease decides if dragged enough (pixels > 0) goes away or if dragged (pixels < 0) snaps back
+  */
+  const handlePanResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only work when swiping down
       return gestureState.dy > 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
     },
     onPanResponderMove: (evt, gestureState) => {
-     
       if (gestureState.dy > 0) {
         sheetTranslateY.setValue(gestureState.dy);
       }
     },
     onPanResponderRelease: (evt, gestureState) => {
-      const threshold = screenHeight * 0.3; // 30% of screen height threshold
-      
+      const threshold = screenHeight * 0.3; 
       if (gestureState.dy > threshold || gestureState.vy > 0.5) {
-        // Dismiss sheet if dragged down enough or fast enough
         hideSheet();
       } else {
-        // Snap back to original position
         Animated.spring(sheetTranslateY, {
           toValue: 0,
           useNativeDriver: true,
@@ -206,17 +207,27 @@ const MapPage = () => {
     lastScale.current = newScale;
   };
 
-  // Convert latitude/longitude to x/y percentage coordinates for the map
-  const convertLocationToMapCoords = (lat: number, lon: number) => {
-    // Map bounds for St. George's Cathedral area (adjust these based on your actual map)
-    const northWest = { lat: 0, lon: 0 };
-    const southEast = { lat: 100, lon: 100 };
-
-    const clamp = (v: number) => Math.max(0, Math.min(1, v));
-    const x = clamp((lon - northWest.lon) / (southEast.lon - northWest.lon));
-    const y = clamp((lat - northWest.lat) / (southEast.lat - northWest.lat));
-
-    return { x, y };
+  /*
+  This method is for the precise pixel coordinates for each POI based on the cathedral floor plan
+  it is a record of the x and y coordinates for each POI.
+  How it works: first we get all the poi ID's, which is 1-14 and then we define the coordinates for each poi based on where it is situated on the map 
+                since we have a static map and not a geographical accurate map    
+                then the coordinates are used as percentages between 0 and 1 to determine how far from the top and left edge of the map they should be positioned             
+  */
+  const getPOIMapCoordinates = (poiId: number) => {
+  
+    const poiCoordinates: Record<number, { x: number, y: number }> = {
+      1: { x: 0.3, y: 0.4 },    
+      2: { x: 0.7, y: 0.6 },     
+      3: { x: 0.5, y: 0.8 }, 
+      4: { x: 0.2, y: 0.7 },     
+    };
+    
+    
+    const coords = poiCoordinates[poiId] || { x: 0.5, y: 0.5 };
+    
+   
+    return coords;
   };
 
   // Load POIs from database
@@ -225,9 +236,7 @@ const MapPage = () => {
 
     setLoadingPOIs(true);
     try {
-      console.log('Loading POIs with images from database...');
       const pois = await DatabaseApi.getAllPOIsWithImages();
-      console.log(`Loaded ${pois.length} POIs with images from database`);
 
       setDbPOIs(pois);
 
@@ -245,10 +254,12 @@ const MapPage = () => {
   // Convert database POIs to map markers
   const databaseMarkers = useMemo(() => {
     return dbPOIs.map((poi, index) => {
-      const coords = convertLocationToMapCoords(poi.location.latitude, poi.location.longitude);
+      // Use precise map coordinates instead of lat/lng conversion
+      const coords = getPOIMapCoordinates(poi.id);
       const imageUrl = imageUrls.get(poi.imageID);
+      
       return {
-        id: parseInt(poi.id) || (1000 + index), // Use POI id if numeric, otherwise generate one
+        id: poi.id, 
         x: coords.x,
         y: coords.y,
         title: poi.title,
@@ -274,6 +285,13 @@ const MapPage = () => {
   useEffect(() => {
     loadPOIsFromDatabase();
   }, []);
+
+  // load images when POIs are loaded
+  useEffect(() => {
+    if (dbPOIs.length > 0) {
+      preloadPOIImages(dbPOIs);
+    }
+  }, [dbPOIs, preloadPOIImages]);
 
   useEffect(() => {
     let isMounted = true;
@@ -314,13 +332,15 @@ const MapPage = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => {}}>
-          <Link href="/" style={styles.backButtonLink}>
-            <Text style={styles.backButtonText}>‹ Back</Text>
-          </Link>
-        </TouchableOpacity>
-        <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
-        <View style={styles.headerSpacer} />
+          <TouchableOpacity style={styles.backButton} onPress={() => {}}>
+            <Link href="/" style={styles.backButtonLink}>
+              <Text style={styles.backButtonText}>‹ Back</Text>
+            </Link>
+          </TouchableOpacity>
+          <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+          <TouchableOpacity style={styles.helpButton}>
+            <Text style={styles.helpButtonText}>?</Text>
+          </TouchableOpacity>
       </View>
 
       {/* Map with pan and zoom functionality */}
@@ -409,16 +429,15 @@ const MapPage = () => {
 
       {/* Bottom sheet only when a POI is selected */}
       {isSheetVisible && selectedMarker && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.sheet,
             {
               transform: [{ translateY: sheetTranslateY }]
             }
           ]}
-          {...sheetPanResponder.panHandlers}
         >
-          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHandle} {...handlePanResponder.panHandlers} />
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
             <View style={styles.sheetHeaderRow}>
               <View style={styles.sheetIndex}>
@@ -427,13 +446,14 @@ const MapPage = () => {
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
             </View>
             
-            <POIImage 
-              imageID={selectedMarker.imageID} 
-              style={styles.sheetImage} 
-              fallbackSource={fallbackImg}
-              resizeMode="cover"
-              containerStyle={styles.imageContainer}
-            />
+              <POIImage
+                imageID={selectedMarker.imageID}
+                style={styles.sheetImage}
+                fallbackSource={fallbackImg}
+                resizeMode="cover"
+                containerStyle={styles.imageContainer}
+                onError={(error) => console.error('POI Image Error:', error)}
+              />
             
             <View style={styles.contentSection}>
               <Text style={styles.sectionTitle}>About This Location</Text>
@@ -519,9 +539,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
   },
-  headerSpacer: {
-    minWidth: 60,
-    minHeight: 44,
+  helpButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#8F000D',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  helpButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   brand: { 
     color: '#8F000D', 
@@ -610,22 +647,20 @@ const styles = StyleSheet.create({
   },
   pin: { 
     position: 'absolute', 
-    width: 36, // Larger for better touch targets
-    height: 36, 
-    borderRadius: 18, 
+    width: 24, // Smaller circles
+    height: 24, 
+    borderRadius: 12, 
     alignItems: 'center', 
     justifyContent: 'center', 
-    transform: [{ translateX: -18 }, { translateY: -18 }],
+    transform: [{ translateX: -12 }, { translateY: -12 }],
     shadowColor: '#8F000D',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 6,
-    borderWidth: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
-    // Better touch feedback
-    minWidth: 44,
-    minHeight: 44,
+    // Remove minWidth and minHeight to keep circles round
   },
   pinText: { 
     color: 'white', 

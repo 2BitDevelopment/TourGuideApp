@@ -64,20 +64,19 @@ export class DatabaseApi {
         const data = doc.data();
         
         const poi = {
-          id: doc.id,
+          id: data.id || doc.id, // Use the id field from document, fallback to doc.id
           title: data.title || '',
           text: data.text || '',
           text2: data.text2 || '',
           location: {
-            latitude: data.location?.latitude || 0,
-            longitude: data.location?.longitude || 0,
+            // latitude: data.location?.latitude || 0,    // Not used using hardcoded map coordinates
+            // longitude: data.location?.longitude || 0,  // Not used, using hardcoded map coordinates
             name: data.location?.name || ''
           },
           description: data.description || '',
-          imageID: data.imageID || ''
+          imageID: `${data.id || doc.id}.jpg`
         };
         
-        console.log('Created POI object:', poi);
         POIs.push(poi);
       });
       
@@ -101,17 +100,17 @@ export class DatabaseApi {
       if (docSnap.exists()) {
         const data = docSnap.data();
         return {
-          id: docSnap.id,
+          id: data.id,
           title: data.title || '',
           text: data.text || '',
           text2: data.text2 || '',
           location: {
-            latitude: data.location?.latitude || 0,
-            longitude: data.location?.longitude || 0,
+            // latitude: data.location?.latitude || 0,    // Not used, using hardcoded map coordinates
+            // longitude: data.location?.longitude || 0,  // Not used ,using hardcoded map coordinates
             name: data.location?.name || ''
           },
           description: data.description || '',
-          imageID: data.imageID || ''
+          imageID: `${data.id || docSnap.id}.jpg` 
         };
       }
       
@@ -207,9 +206,7 @@ export class DatabaseApi {
    * @returns Promise<Map<string, string | null>>
    */
   async preloadPOIImages(pois: POI[]): Promise<Map<string, string | null>> {
-    const imageIDs = pois
-      .map(poi => poi.imageID)
-      .filter(imageID => imageID && imageID.trim());
+    const imageIDs = pois.map(poi => poi.imageID);
     
     return this.loadImages(imageIDs);
   }
@@ -228,9 +225,7 @@ export class DatabaseApi {
       }
 
       // Preload all images in parallel
-      console.log(`Preloading images for ${pois.length} POIs...`);
       await this.preloadPOIImages(pois);
-      console.log('Image preloading completed');
 
       return pois;
     } catch (error) {
