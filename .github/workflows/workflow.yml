@@ -1,0 +1,39 @@
+name: CI 
+
+
+# Workflow trigger
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    workflow_dispatch:
+
+
+#what tasks to run
+        jobs:
+            build:
+            runs-on: ubuntu-latest
+
+            #get code from repository
+                 steps:
+                     - name: Checkout repository
+                     uses: actions/checkout@v2
+
+                     #set up Node.js environment
+                     - name: Set up Node.js
+                     uses: actions/setup-node@v2
+                     with:
+                         node-version: '14'
+                         cache: 'npm'
+                  #install dependencies
+                    - name: Install dependencies
+                      run: npm ci #clean install
+
+                      - name: Linter
+                    run: npm run lint
+                    #run tests
+                    - name: Run tests
+                      run: npm test
