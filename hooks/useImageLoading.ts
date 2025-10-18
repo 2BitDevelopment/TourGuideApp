@@ -115,9 +115,7 @@ export const useImageLoading = (): UseImageLoadingReturn => {
   const preloadPOIImages = useCallback(async (pois: POI[]) => {
     if (!pois || pois.length === 0) return;
 
-    const imageIDs = pois
-      .map(poi => poi.imageID)
-      .filter(imageID => imageID && imageID.trim());
+    const imageIDs = pois.map(poi => poi.imageID);
 
     await loadImages(imageIDs);
   }, [loadImages]);

@@ -1,5 +1,8 @@
+import { Asset } from 'expo-asset';
+import { Link } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Image, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SvgUri } from 'react-native-svg';
 import { POIImage } from '../components/POIImage';
 import { useImageLoading } from '../hooks/useImageLoading';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
@@ -19,22 +22,31 @@ type Marker = {
 
 // Fallback image for POIs without loaded images
 const fallbackImg = require('../assets/images/react-logo.png');
+const floorplanAsset = Asset.fromModule(require('../assets/images/cathedral-floor.svg'));
 
 const MapPage = () => {
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
+  const screenHeight = Dimensions.get('window').height;
 
   // Bottom sheet selection (only opens when a POI is tapped)
   const [sheetId, setSheetId] = useState<number | null>(null);
+  
+  // Bottom sheet animation state
+  const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
 
   // Pan and zoom state
   const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(2)).current; // Start with 2x zoom
+  const scale = useRef(new Animated.Value(1)).current; // Start with 1x zoom (more zoomed out)
   const lastPan = useRef({ x: 0, y: 0 });
-  const lastScale = useRef(2);
+  const lastScale = useRef(1);
 
   // Database POIs state
   const [dbPOIs, setDbPOIs] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState<boolean>(false);
+  const [floorplanUri, setFloorplanUri] = useState<string | null>(
+    floorplanAsset.localUri ?? floorplanAsset.uri ?? null
+  );
 
   // Image loading hook
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
@@ -102,6 +114,58 @@ const MapPage = () => {
     },
   });
 
+  /* 
+  So this method is for the poi pop up slide up and down functionality
+  it is a pan responder that is used to drag the sheet up and down.
+  How it works:  Touch starts, onMoveShouldSetPanResponder checks if it's a downward swipe
+                 User drags, onPanResponderMove moves the sheet down by gestureState.dy pixels
+                 User releases, onPanResponderRelease decides if dragged enough (pixels > 0) goes away or if dragged (pixels < 0) snaps back
+  */
+  const handlePanResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      return gestureState.dy > 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      if (gestureState.dy > 0) {
+        sheetTranslateY.setValue(gestureState.dy);
+      }
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      const threshold = screenHeight * 0.3; 
+      if (gestureState.dy > threshold || gestureState.vy > 0.5) {
+        hideSheet();
+      } else {
+        Animated.spring(sheetTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 100,
+          friction: 8,
+        }).start();
+      }
+    },
+  });
+
+  // Sheet animation 
+  const showSheet = () => {
+    setIsSheetVisible(true);
+    Animated.timing(sheetTranslateY, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hideSheet = () => {
+    Animated.timing(sheetTranslateY, {
+      toValue: screenHeight,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsSheetVisible(false);
+      setSheetId(null);
+    });
+  };
+
   // Reset zoom function
   const resetZoom = () => {
     Animated.parallel([
@@ -111,14 +175,14 @@ const MapPage = () => {
         useNativeDriver: false,
       }),
       Animated.timing(scale, {
-        toValue: 2,
+        toValue: 1,
         duration: 300,
         useNativeDriver: false,
       }),
     ]).start();
 
     lastPan.current = { x: 0, y: 0 };
-    lastScale.current = 2;
+    lastScale.current = 1;
   };
 
   // Zoom in function
@@ -143,17 +207,27 @@ const MapPage = () => {
     lastScale.current = newScale;
   };
 
-  // Convert latitude/longitude to x/y percentage coordinates for the map
-  const convertLocationToMapCoords = (lat: number, lon: number) => {
-    // Map bounds for St. George's Cathedral area (adjust these based on your actual map)
-    const northWest = { lat: 0, lon: 0 };
-    const southEast = { lat: 100, lon: 100 };
-
-    const clamp = (v: number) => Math.max(0, Math.min(1, v));
-    const x = clamp((lon - northWest.lon) / (southEast.lon - northWest.lon));
-    const y = clamp((lat - northWest.lat) / (southEast.lat - northWest.lat));
-
-    return { x, y };
+  /*
+  This method is for the precise pixel coordinates for each POI based on the cathedral floor plan
+  it is a record of the x and y coordinates for each POI.
+  How it works: first we get all the poi ID's, which is 1-14 and then we define the coordinates for each poi based on where it is situated on the map 
+                since we have a static map and not a geographical accurate map    
+                then the coordinates are used as percentages between 0 and 1 to determine how far from the top and left edge of the map they should be positioned             
+  */
+  const getPOIMapCoordinates = (poiId: number) => {
+  
+    const poiCoordinates: Record<number, { x: number, y: number }> = {
+      1: { x: 0.3, y: 0.4 },    
+      2: { x: 0.7, y: 0.6 },     
+      3: { x: 0.5, y: 0.8 }, 
+      4: { x: 0.2, y: 0.7 },     
+    };
+    
+    
+    const coords = poiCoordinates[poiId] || { x: 0.5, y: 0.5 };
+    
+   
+    return coords;
   };
 
   // Load POIs from database
@@ -162,9 +236,7 @@ const MapPage = () => {
 
     setLoadingPOIs(true);
     try {
-      console.log('Loading POIs with images from database...');
       const pois = await DatabaseApi.getAllPOIsWithImages();
-      console.log(`Loaded ${pois.length} POIs with images from database`);
 
       setDbPOIs(pois);
 
@@ -181,11 +253,17 @@ const MapPage = () => {
 
   // Convert database POIs to map markers
   const databaseMarkers = useMemo(() => {
-    return dbPOIs.map((poi, index) => {
-      const coords = convertLocationToMapCoords(poi.location.latitude, poi.location.longitude);
+    // Sort POIs by their ID to ensure ascending order
+    const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
+    
+    return sortedPOIs.map((poi, index) => {
+      // Use precise map coordinates instead of lat/lng conversion
+      const coords = getPOIMapCoordinates(poi.id); 
       const imageUrl = imageUrls.get(poi.imageID);
+      
       return {
-        id: parseInt(poi.id) || (1000 + index), // Use POI id if numeric, otherwise generate one
+        id: index + 1, 
+        originalId: poi.id, 
         x: coords.x,
         y: coords.y,
         title: poi.title,
@@ -212,6 +290,39 @@ const MapPage = () => {
     loadPOIsFromDatabase();
   }, []);
 
+  // load images when POIs are loaded
+  useEffect(() => {
+    if (dbPOIs.length > 0) {
+      preloadPOIImages(dbPOIs);
+    }
+  }, [dbPOIs, preloadPOIImages]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const ensureFloorplanReady = async () => {
+      try {
+        if (!floorplanAsset.localUri) {
+          await floorplanAsset.downloadAsync();
+        }
+
+        if (isMounted) {
+          setFloorplanUri(floorplanAsset.localUri ?? floorplanAsset.uri ?? null);
+        }
+      } catch (error) {
+        console.error('Failed to load floorplan SVG asset:', error);
+      }
+    };
+
+    if (!floorplanAsset.localUri) {
+      ensureFloorplanReady();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Cleanup listeners on unmount
   useEffect(() => {
     return () => {
@@ -225,7 +336,17 @@ const MapPage = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => {}}>
+            <Link href="/" style={styles.backButtonLink}>
+              <Text style={styles.backButtonText}>‹ Back</Text>
+            </Link>
+          </TouchableOpacity>
+          <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+          <TouchableOpacity style={styles.helpButton}>
+            <Link href="/help" style={styles.helpButtonLink}>
+              <Text style={styles.helpButtonText}>?</Text>
+            </Link>
+          </TouchableOpacity>
       </View>
 
       {/* Map with pan and zoom functionality */}
@@ -247,11 +368,18 @@ const MapPage = () => {
           ]}
         >
           {/* Floorplan background */}
-          <Image
-            source={require('../assets/images/cathedral-floor.svg')}
-            style={styles.floor}
-            resizeMode="contain"
-          />
+          {floorplanUri ? (
+            <SvgUri
+              uri={floorplanUri}
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
+              style={styles.floor}
+              pointerEvents="none"
+            />
+          ) : (
+            <View style={[styles.floor, styles.floorFallback]} pointerEvents="none" />
+          )}
 
           {allMarkers.map(m => (
             <TouchableOpacity
@@ -264,6 +392,7 @@ const MapPage = () => {
               }]}
               onPress={() => {
                 setSheetId(m.id);
+                showSheet();
               }}
             >
               <Text style={styles.pinText}>{m.id}</Text>
@@ -305,27 +434,55 @@ const MapPage = () => {
       </View>
 
       {/* Bottom sheet only when a POI is selected */}
-      {selectedMarker && (
-        <View style={styles.sheet}>
-          <View style={styles.sheetHandle} />
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+      {isSheetVisible && selectedMarker && (
+        <Animated.View
+          style={[
+            styles.sheet,
+            {
+              transform: [{ translateY: sheetTranslateY }]
+            }
+          ]}
+        >
+          <View style={styles.sheetHandle} {...handlePanResponder.panHandlers} />
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
             <View style={styles.sheetHeaderRow}>
-              <Text style={styles.sheetIndex}>{selectedMarker.id}</Text>
+              <View style={styles.sheetIndex}>
+                <Text style={styles.pinText}>{selectedMarker.id}</Text>
+              </View>
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
             </View>
-            <POIImage
-              imageID={selectedMarker.imageID}
-              style={styles.sheetImage}
-              fallbackSource={fallbackImg}
-              resizeMode="cover"
-            />
-            <Text style={styles.sheetBody}>{selectedMarker.blurb}</Text>
-            <Text style={styles.sectionTitle}>Historical Significance</Text>
-            <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
+            
+              <POIImage
+                imageID={selectedMarker.imageID}
+                style={styles.sheetImage}
+                fallbackSource={fallbackImg}
+                resizeMode="cover"
+                containerStyle={styles.imageContainer}
+                onError={(error) => console.error('POI Image Error:', error)}
+              />
+            
+            <View style={styles.contentSection}>
+              <Text style={styles.sectionTitle}>About This Location</Text>
+              <Text style={styles.sheetBody}>
+                {selectedMarker.blurb || 'Discover the rich history and significance of this sacred space within St. George\'s Cathedral.'}
+              </Text>
+            </View>
+            
+            {selectedMarker.history && selectedMarker.history !== selectedMarker.blurb && (
+              <View style={styles.contentSection}>
+                <Text style={styles.sectionTitle}>Historical Significance</Text>
+                <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
+              </View>
+            )}
+            
+            <View style={styles.churchFooter}>
+              <Text style={styles.footerText}>St. George's Cathedral</Text>
+              <Text style={styles.footerSubtext}>The People's Cathedral</Text>
+            </View>
           </ScrollView>
 
           <View style={styles.sheetFooter}>
-            <TouchableOpacity style={[styles.pillButton, styles.pillGhost]} onPress={() => setSheetId(null)}>
+            <TouchableOpacity style={[styles.pillButton, styles.pillGhost]} onPress={hideSheet}>
               <Text style={[styles.pillText, styles.pillGhostText]}>‹ Close</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]}>
@@ -337,12 +494,13 @@ const MapPage = () => {
                 const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
                 const next = allMarkers[(idx + 1) % allMarkers.length];
                 setSheetId(next.id);
+                // Keep sheet open, just change content
               }}
             >
               <Text style={[styles.pillText, styles.pillGhostText]}>Next ›</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       )}
     </View>
   );
@@ -351,25 +509,81 @@ const MapPage = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f3f4f6' 
+    backgroundColor: '#FFFFFF', 
   },
   header: { 
-    alignItems: 'center', 
-    paddingTop: 16, 
-    paddingBottom: 8, 
-    backgroundColor: '#fff', 
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 44, // Account for status bar
+    paddingBottom: 16, 
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF', 
     borderBottomWidth: 1, 
-    borderBottomColor: '#e5e7eb' 
+    borderBottomColor: '#FFDAD6',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  backButton: {
+    minWidth: 60,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  backButtonLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#8F000D',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+  },
+  helpButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#8F000D',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  helpButtonLink: {
+    flex: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  helpButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    textAlign: 'center',
+    lineHeight: 44,
+    marginHorizontal: 10,
   },
   brand: { 
-    color: '#b61f24', 
-    fontSize: 24, 
+    color: '#8F000D', 
+    fontSize: 20, 
     fontWeight: '800', 
-    textAlign: 'center' 
+    textAlign: 'center',
+    fontFamily: 'PlayfairDisplay-Bold',
+    letterSpacing: 0.5,
+    flex: 1,
   },
   mapArea: { 
     flex: 1, 
-    backgroundColor: '#f3f4f6', 
+    backgroundColor: '#FFFFFF', 
     position: 'relative', 
     overflow: 'hidden' 
   },
@@ -379,160 +593,242 @@ const styles = StyleSheet.create({
     height: '100%' 
   },
   floor: { 
-    ...StyleSheet.absoluteFillObject 
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.9, // Slightly transparent for better contrast
+  },
+  floorFallback: {
+    backgroundColor: '#f3f4f6',
   },
   editControls: { 
     position: 'absolute', 
-    top: 12, 
-    right: 12, 
+    top: 16, 
+    right: 16, 
     flexDirection: 'row', 
     gap: 8 
   },
   editButton: { 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    paddingVertical: 6, 
-    paddingHorizontal: 10, 
-    borderRadius: 8 
+    backgroundColor: 'rgba(143, 0, 13, 0.9)', 
+    paddingVertical: 8, 
+    paddingHorizontal: 12, 
+    borderRadius: 20,
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   editOn: { 
-    backgroundColor: '#b61f24' 
+    backgroundColor: '#8F000D' 
   },
   editText: { 
     color: 'white', 
-    fontWeight: '700' 
+    fontWeight: '600',
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
   },
   zoomControls: { 
     position: 'absolute', 
-    bottom: 12, 
-    right: 12, 
+    bottom: 24, 
+    right: 16, 
     flexDirection: 'column', 
-    gap: 8 
+    gap: 12 
   },
   zoomButton: { 
-    backgroundColor: 'rgba(0,0,0,0.7)', 
-    width: 44, 
-    height: 44, 
-    borderRadius: 22, 
+    backgroundColor: 'rgba(143, 0, 13, 0.9)', 
+    width: 48, 
+    height: 48, 
+    borderRadius: 24, 
     alignItems: 'center', 
     justifyContent: 'center', 
-    shadowColor: '#000', 
-    shadowOpacity: 0.2, 
-    shadowRadius: 3, 
-    shadowOffset: { width: 0, height: 2 } 
+    shadowColor: '#8F000D',
+    shadowOpacity: 0.3, 
+    shadowRadius: 6, 
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
   zoomButtonText: { 
     color: 'white', 
-    fontSize: 20, 
+    fontSize: 22, 
     fontWeight: '700' 
   },
   resetButtonText: { 
     color: 'white', 
     fontSize: 16, 
-    fontWeight: '700' 
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
   },
   pin: { 
     position: 'absolute', 
-    width: 28, 
-    height: 28, 
-    borderRadius: 14, 
+    width: 24, // Smaller circles
+    height: 24, 
+    borderRadius: 12, 
     alignItems: 'center', 
     justifyContent: 'center', 
-    transform: [{ translateX: -14 }, { translateY: -14 }] 
+    transform: [{ translateX: -12 }, { translateY: -12 }],
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    // Remove minWidth and minHeight to keep circles round
   },
   pinText: { 
     color: 'white', 
     fontWeight: '700', 
-    fontSize: 12 
+    fontSize: 13,
+    fontFamily: 'Inter-Bold',
   },
   sheet: { 
     position: 'absolute', 
     left: 0, 
     right: 0, 
     bottom: 0, 
-    top: '40%', 
+    top: '35%', 
     backgroundColor: 'white', 
-    borderTopLeftRadius: 16, 
-    borderTopRightRadius: 16, 
-    padding: 16, 
-    shadowColor: '#000', 
-    shadowOpacity: 0.1, 
-    shadowRadius: 8, 
-    shadowOffset: { width: 0, height: -2 } 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    padding: 20, 
+    shadowColor: '#8F000D', 
+    shadowOpacity: 0.15, 
+    shadowRadius: 12, 
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 8,
+    // Ensure smooth animations
+    zIndex: 1000,
   },
   sheetHandle: { 
     alignSelf: 'center', 
-    width: 36, 
-    height: 4, 
-    borderRadius: 2, 
-    backgroundColor: '#e5e7eb', 
-    marginBottom: 8 
+    width: 50, 
+    height: 5, 
+    borderRadius: 3, 
+    backgroundColor: '#8F000D', 
+    marginBottom: 16,
+    opacity: 0.6,
   },
   sheetHeaderRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    marginBottom: 8 
+    marginBottom: 16 
   },
   sheetIndex: { 
-    width: 26, 
-    height: 26, 
-    borderRadius: 13, 
-    backgroundColor: '#b61f24', 
-    color: 'white', 
-    textAlign: 'center', 
-    textAlignVertical: 'center', 
-    fontWeight: '700', 
-    marginRight: 8 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    backgroundColor: '#8F000D', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginRight: 12,
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   sheetTitle: { 
-    fontSize: 22, 
+    fontSize: 24, 
     fontWeight: '800', 
     color: '#111827', 
-    marginBottom: 8 
+    marginBottom: 0,
+    fontFamily: 'PlayfairDisplay-Bold',
+    flex: 1,
   },
   sheetImage: { 
     width: '100%', 
-    height: 200, 
-    borderRadius: 12, 
-    marginBottom: 12 
+    height: 220, 
+    borderRadius: 16, 
+    marginBottom: 20,
+  },
+  imageContainer: {
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  contentSection: {
+    marginBottom: 20,
   },
   sheetBody: { 
-    fontSize: 14, 
+    fontSize: 16, 
     color: '#374151', 
-    lineHeight: 20, 
-    marginBottom: 12 
+    lineHeight: 24, 
+    marginBottom: 12,
+    fontFamily: 'Inter-Regular',
   },
   sectionTitle: { 
-    fontSize: 16, 
-    fontWeight: '800', 
-    color: '#b61f24', 
-    marginBottom: 6 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#8F000D', 
+    marginBottom: 8,
+    fontFamily: 'PlayfairDisplay-Bold',
+  },
+  churchFooter: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#FFDAD6',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8F000D',
+    fontFamily: 'PlayfairDisplay-Bold',
+    marginBottom: 4,
+  },
+  footerSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontFamily: 'Inter-Regular',
+    fontStyle: 'italic',
   },
   sheetFooter: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    marginTop: 8 
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#FFDAD6',
   },
   pillButton: { 
-    paddingVertical: 10, 
-    paddingHorizontal: 16, 
-    borderRadius: 999 
+    paddingVertical: 12, 
+    paddingHorizontal: 20, 
+    borderRadius: 25,
+    minWidth: 80,
+    alignItems: 'center',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   pillText: { 
     fontSize: 14, 
-    fontWeight: '700' 
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
   },
   pillGhost: { 
-    backgroundColor: '#f3f4f6' 
+    backgroundColor: '#FFF8F7',
+    borderWidth: 1,
+    borderColor: '#FFDAD6',
   },
   pillGhostText: { 
-    color: '#111827' 
+    color: '#8F000D' 
   },
   pillPrimary: { 
-    backgroundColor: '#b61f24' 
+    backgroundColor: '#8F000D',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   pillPrimaryText: { 
-    color: 'white' 
+    color: 'white',
+    fontWeight: '700',
   },
 });
 
