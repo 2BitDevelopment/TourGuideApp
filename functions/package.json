@@ -1,24 +1,28 @@
 {
   "name": "functions",
   "scripts": {
-    "lint": "eslint --ext .js,.ts .",
+    "lint": "eslint",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-smtp": "ts-node src/index.ts"
   },
   "engines": {
     "node": "22"
   },
   "main": "lib/index.js",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.0.1",
     "nodemailer": "^7.0.9",
-    "pdfkit": "^0.17.2"
+    "pdfkit": "^0.17.2",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/nodemailer": "^7.0.2",
