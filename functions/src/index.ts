@@ -84,47 +84,156 @@ export const sendMonthlyReport = onSchedule(
     const pdfBuffer = await generatePdfReport(totalViews, totalClicks, topPOIs);
 
     // Send Email
-    await sendEmail(pdfBuffer, "Website Analytics Report - Monthly");
+    await sendEmail(pdfBuffer, "TourApp Analytics Report - Monthly");
   });
 
 async function generatePdfReport(views: number, clicks: number, topPOIs: { name: string; views: number }[]) {
   return new Promise<Buffer>((resolve, reject) => {
-    const doc = new PDFDocument();
+    const doc = new PDFDocument({ margin: 40 });
     const chunks: Buffer[] = [];
     
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    // Header
-    doc.fontSize(24).text("St. George's Cathedral Tour Guide Analytics", { align: "center" });
-    doc.moveDown();
-    doc.fontSize(16).text(`Report Generated: ${new Date().toLocaleDateString()}`, { align: "center" });
-    doc.moveDown(2);
+    // Header with Website Analytics and 2BIT
+    doc.fontSize(28)
+       .fillColor('#4A90A4')
+       .text("Website Analytics", 60, 60, { continued: true })
+       .fillColor('#2C5F6F')
+       .fontSize(32)
+       .text(" 2BIT", { align: 'right' });
 
-    // Overview Statistics
-    doc.fontSize(18).text("Overview Statistics", { underline: true });
-    doc.moveDown();
-    doc.fontSize(14).text(`Total App/Website Views: ${views}`);
-    doc.text(`Total POI Interactions: ${clicks}`);
-    doc.moveDown(2);
+    // Date range and contact info
+    const currentDate = new Date();
+    const endMonth = currentDate.toLocaleDateString('en-US', { month: 'long' });
+    const year = currentDate.getFullYear();
+    
+    doc.fontSize(10)
+       .fillColor('#666666')
+       .text(`March to ${endMonth} ${year}`, 60, 110)
+       .text("Contact: jwehart.7@gmail.com", {align: 'right', continued: false});
 
-    // Top POIs Section
-    doc.fontSize(18).text("Top 5 Most Popular Points of Interest", { underline: true });
-    doc.moveDown();
+    // Large visitor count
+    doc.fontSize(72)
+       .fillColor('#4A90A4')
+       .text(views.toString(), 60, 160);
+    
+    doc.fontSize(24)
+       .fillColor('#333333')
+       .text("Visitors", 200, 200);
+
+    // Horizontal line
+    doc.strokeColor('#CCCCCC')
+       .lineWidth(1)
+       .moveTo(60, 250)
+       .lineTo(540, 250)
+       .stroke();
+
+    // Top 5 Spots section with table styling
+    doc.fontSize(16)
+       .fillColor('#4A90A4')
+       .text("Top 5 Spots", 60, 280);
+
+    // Table header background
+    doc.rect(60, 310, 200, 25)
+       .fillColor('#E8F4F8')
+       .fill();
+
+    // Table border
+    doc.rect(60, 310, 200, 25 + (Math.min(topPOIs.length, 5) * 25))
+       .strokeColor('#CCCCCC')
+       .lineWidth(1)
+       .stroke();
+
+    let yPosition = 320;
     
     if (topPOIs.length > 0) {
-      topPOIs.forEach((poi, index) => {
-        doc.fontSize(14).text(`${index + 1}. ${poi.name}: ${poi.views} views`);
+      topPOIs.slice(0, 5).forEach((poi, index) => {
+        // Alternate row background
+        if (index % 2 === 1) {
+          doc.rect(60, yPosition - 5, 200, 25)
+             .fillColor('#F8F8F8')
+             .fill();
+        }
+        
+        doc.fontSize(12)
+           .fillColor('#333333')
+           .text(`${index + 1}. ${poi.name.split(' (ID:')[0]}`, 70, yPosition);
+        
+        yPosition += 25;
       });
     } else {
-      doc.fontSize(14).text("No POI data available for this period.");
+      doc.fontSize(12)
+         .fillColor('#666666')
+         .text("No data available", 70, yPosition);
     }
 
-    doc.moveDown(2);
-    doc.fontSize(12).text("This report includes data from the St. George's Cathedral mobile tour guide application.", { 
-      align: "center"
-    });
+    // Simple pie chart representation (using circles and paths)
+    const centerX = 420;
+    const centerY = 400;
+    const radius = 60;
+
+    // Background circle (largest segment)
+    doc.circle(centerX, centerY, radius)
+       .fillColor('#87CEEB')
+       .fill();
+
+    // Draw pie segments using bezier curves to approximate arcs
+    // Segment 1 (about 60% - darker blue)
+    doc.save();
+    doc.fillColor('#4A90A4');
+    doc.moveTo(centerX, centerY);
+    doc.lineTo(centerX + radius, centerY);
+    doc.bezierCurveTo(
+      centerX + radius, centerY - radius * 0.8,
+      centerX + radius * 0.2, centerY - radius,
+      centerX - radius * 0.5, centerY - radius * 0.8
+    );
+    doc.closePath();
+    doc.fill();
+    doc.restore();
+
+    // Segment 2 (about 25% - medium blue)
+    doc.save();
+    doc.fillColor('#6BB6FF');
+    doc.moveTo(centerX, centerY);
+    doc.lineTo(centerX - radius * 0.5, centerY - radius * 0.8);
+    doc.bezierCurveTo(
+      centerX - radius * 0.9, centerY - radius * 0.3,
+      centerX - radius * 0.9, centerY + radius * 0.3,
+      centerX - radius * 0.5, centerY + radius * 0.8
+    );
+    doc.closePath();
+    doc.fill();
+    doc.restore();
+
+    // Legend
+    const legendY = 480;
+    doc.rect(330, legendY, 12, 12)
+       .fillColor('#4A90A4')
+       .fill();
+    doc.fontSize(10)
+       .fillColor('#666666')
+       .text("Under 10 min", 350, legendY + 2);
+
+    doc.rect(330, legendY + 20, 12, 12)
+       .fillColor('#6BB6FF')
+       .fill();
+    doc.text("10 to 20 min", 350, legendY + 22);
+
+    doc.rect(330, legendY + 40, 12, 12)
+       .fillColor('#87CEEB')
+       .fill();
+    doc.text("25 min +", 350, legendY + 42);
+
+    // Footer
+    doc.fontSize(10)
+       .fillColor('#666666')
+       .text("This report includes data from the St. George's Cathedral mobile tour guide application.", 60, 580, { 
+         align: "center",
+         width: 480
+       });
 
     doc.end();
   });
@@ -134,21 +243,14 @@ async function sendEmail(attachment: Buffer, subject: string) {
   const transporter = nodemailer.createTransport(mailersendConfig);
 
   await transporter.sendMail({
-    from: `St. George's Cathedral Analytics <${process.env.SMTP_USER}>`,
+    from: `2BitDevelopment <${process.env.SMTP_USER}>`,
     to: process.env.RECIPIENT_EMAIL || "jwehart.7@gmail.com",
     subject,
-    text: "Here is your analytics report for the St. George's Cathedral tour guide application, including POI interaction data and visitor statistics.",
+    text: "Here is your analytics report for the St. George's Cathedral tour app, including POI interaction data and visitor statistics.",
     html: `
-      <h2>St. George's Cathedral Tour Guide Analytics</h2>
-      <p>Please find attached your analytics report for the St. George's Cathedral mobile tour guide application.</p>
-      <p>This report includes:</p>
-      <ul>
-        <li>Total app and website views</li>
-        <li>POI interaction statistics</li>
-        <li>Top 5 most popular points of interest</li>
-        <li>User engagement metrics</li>
-      </ul>
-      <p>Best regards,<br>The Analytics Team</p>
+      <h2>St. George's Cathedral Tour App Analytics</h2>
+      <p>Please find attached your analytics report for the St. George's Cathedral mobile tour app.</p>
+      <p>Best regards,<br>2BitDevelopment</p>
     `,
     attachments: [
       {
