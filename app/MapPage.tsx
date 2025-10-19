@@ -6,6 +6,7 @@ import { SvgUri } from 'react-native-svg';
 import { POIImage } from '../components/POIImage';
 import { useImageLoading } from '../hooks/useImageLoading';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
+import { Analytics } from '../util/Analytics';
 
 type Marker = {
   id: number;
@@ -288,6 +289,9 @@ const MapPage = () => {
   // Load POIs from database on component mount
   useEffect(() => {
     loadPOIsFromDatabase();
+    // Track map page view
+    Analytics.trackMapView();
+    Analytics.trackPageView('MapPage');
   }, []);
 
   // load images when POIs are loaded
@@ -343,7 +347,7 @@ const MapPage = () => {
           </TouchableOpacity>
           <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
           <TouchableOpacity style={styles.helpButton}>
-            <Link href="/help" style={styles.helpButtonLink}>
+            <Link href={'/help' as any} style={styles.helpButtonLink}>
               <Text style={styles.helpButtonText}>?</Text>
             </Link>
           </TouchableOpacity>
@@ -391,8 +395,14 @@ const MapPage = () => {
                 backgroundColor: '#991b1b'
               }]}
               onPress={() => {
+                // Track POI click analytics
+                Analytics.trackPOIClick(m.originalId || m.id, m.title);
+                
                 setSheetId(m.id);
                 showSheet();
+                
+                // Track POI view analytics when sheet opens
+                Analytics.trackPOIView(m.originalId || m.id, m.title);
               }}
             >
               <Text style={styles.pinText}>{m.id}</Text>
@@ -450,9 +460,7 @@ const MapPage = () => {
                 <Text style={styles.pinText}>{selectedMarker.id}</Text>
               </View>
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
-            </View>
-            
-              <POIImage
+            </View>              <POIImage
                 imageID={selectedMarker.imageID}
                 style={styles.sheetImage}
                 fallbackSource={fallbackImg}
@@ -485,15 +493,37 @@ const MapPage = () => {
             <TouchableOpacity style={[styles.pillButton, styles.pillGhost]} onPress={hideSheet}>
               <Text style={[styles.pillText, styles.pillGhostText]}>‹ Close</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]}>
+            <TouchableOpacity 
+              style={[styles.pillButton, styles.pillPrimary]}
+              onPress={() => {
+                if (selectedMarker) {
+                  Analytics.trackPOIInteraction(
+                    selectedMarker.originalId || selectedMarker.id, 
+                    selectedMarker.title, 
+                    'audio_guide_clicked'
+                  );
+                }
+              }}
+            >
               <Text style={[styles.pillText, styles.pillPrimaryText]}>Audio Guide ▌▌</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.pillButton, styles.pillGhost]}
               onPress={() => {
-                const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
                 const next = allMarkers[(idx + 1) % allMarkers.length];
+                
+                if (selectedMarker) {
+                  Analytics.trackPOIInteraction(
+                    selectedMarker.originalId || selectedMarker.id, 
+                    selectedMarker.title, 
+                    'next_poi_clicked'
+                  );
+                }
+                
                 setSheetId(next.id);
+                // Track the new POI view
+                Analytics.trackPOIView(next.originalId || next.id, next.title);
                 // Keep sheet open, just change content
               }}
             >
