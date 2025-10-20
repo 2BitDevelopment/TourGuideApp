@@ -1,12 +1,13 @@
 import { Link } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { POIImage } from '../components/POIImage';
 
 const HelpPage = () => {
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
         {/* Back Button */}
         <TouchableOpacity style={styles.backButton}>
           <Link href="/MapPage" style={styles.backButtonLink}>
@@ -75,7 +76,8 @@ const HelpPage = () => {
           <Text style={styles.footerText}>St. George's Cathedral</Text>
           <Text style={styles.footerSubtext}>The People's Cathedral</Text>
         </View>
-      </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -83,11 +85,14 @@ const HelpPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#OOOOOO', // Dark gray background
+    backgroundColor: '#FFFFFF', 
+  },
+  scrollContent: {
+    paddingVertical: 20,
   },
   content: {
     flex: 1,
-    backgroundColor: '#OOOOOO', // Light beige content area
+    backgroundColor: '#OOOOOO', 
     margin: 20,
     borderRadius: 20,
     padding: 20,
