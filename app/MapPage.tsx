@@ -10,46 +10,35 @@ import { Analytics } from '../util/Analytics';
 
 type Marker = {
   id: number;
-  x: number; // percentage 0..1 across map area
-  y: number; // percentage 0..1 down map area
+  x: number;
+  y: number;
   title: string;
   image?: any;
-  imageID?: string; // Firebase storage image ID
+  imageID?: string;
   blurb?: string;
   history?: string;
-  isPOI?: boolean; // Flag for database POIs
-  poiData?: POI; // Store original POI data
+  isPOI?: boolean;
+  poiData?: POI;
 };
 
-// Fallback image for POIs without loaded images
 const fallbackImg = require('../assets/images/react-logo.png');
 const floorplanAsset = Asset.fromModule(require('../assets/images/cathedral-floor.svg'));
 
 const MapPage = () => {
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
   const screenHeight = Dimensions.get('window').height;
-
-  // Bottom sheet selection (only opens when a POI is tapped)
-  const [sheetId, setSheetId] = useState<number | null>(null);
-  
-  // Bottom sheet animation state
+  const [sheetId, setSheetId] = useState<number | null>(1);
   const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
   const [isSheetVisible, setIsSheetVisible] = useState(false);
-
-  // Pan and zoom state
   const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current; // Start with 1x zoom (more zoomed out)
+  const scale = useRef(new Animated.Value(1)).current;
   const lastPan = useRef({ x: 0, y: 0 });
   const lastScale = useRef(1);
-
-  // Database POIs state
   const [dbPOIs, setDbPOIs] = useState<POI[]>([]);
   const [loadingPOIs, setLoadingPOIs] = useState<boolean>(false);
   const [floorplanUri, setFloorplanUri] = useState<string | null>(
     floorplanAsset.localUri ?? floorplanAsset.uri ?? null
   );
-
-  // Image loading hook
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
 
   const onMapLayout = (e: LayoutChangeEvent) => {
@@ -60,15 +49,12 @@ const MapPage = () => {
   // Pan responder for handling pan and zoom gestures
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
-      // Only start pan responder if not tapping on a marker
       return evt.nativeEvent.touches.length <= 2;
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Start pan if moved more than 10 pixels or if pinching
       return Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10 || evt.nativeEvent.touches.length === 2;
     },
     onPanResponderGrant: () => {
-      // Store the current pan and scale values
       pan.setOffset({
         x: lastPan.current.x,
         y: lastPan.current.y,
@@ -76,22 +62,19 @@ const MapPage = () => {
       pan.setValue({ x: 0, y: 0 });
     },
     onPanResponderMove: (evt, gestureState) => {
-      // Handle pinch-to-zoom if there are multiple touches
       if (evt.nativeEvent.touches.length === 2) {
         const touch1 = evt.nativeEvent.touches[0];
         const touch2 = evt.nativeEvent.touches[1];
-
+        
         const distance = Math.sqrt(
-          Math.pow(touch2.pageX - touch1.pageX, 2) +
+          Math.pow(touch2.pageX - touch1.pageX, 2) + 
           Math.pow(touch2.pageY - touch1.pageY, 2)
         );
-
-        // Simple pinch-to-zoom implementation
-        const normalizedDistance = distance / 200; // Normalize distance
+        
+        const normalizedDistance = distance / 200;
         const newScale = Math.max(0.5, Math.min(4, lastScale.current * normalizedDistance / 2));
         scale.setValue(newScale);
       } else {
-        // Single touch - pan
         Animated.event([null, { dx: pan.x, dy: pan.y }], {
           useNativeDriver: false,
         })(evt, gestureState);
@@ -99,16 +82,12 @@ const MapPage = () => {
     },
     onPanResponderRelease: (evt, gestureState) => {
       pan.flattenOffset();
-
-      // Clean up listeners to prevent memory leaks
       pan.removeAllListeners();
       scale.removeAllListeners();
-
-      // Update stored values
       pan.addListener((value) => {
         lastPan.current = value;
       });
-
+      
       scale.addListener((value) => {
         lastScale.current = value.value;
       });
@@ -124,24 +103,42 @@ const MapPage = () => {
   */
   const handlePanResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      return gestureState.dy > 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+      return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 5;
     },
     onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dy > 0) {
-        sheetTranslateY.setValue(gestureState.dy);
+      if (isSheetVisible) {
+       
+        if (gestureState.dy > 0) {
+          sheetTranslateY.setValue(gestureState.dy);
+        }
+      } else {
+        if (gestureState.dy < 0 && selectedMarker) {
+          const dragUp = Math.abs(gestureState.dy);
+          const maxDrag = screenHeight * 0.2;
+          const progress = Math.min(dragUp / maxDrag, 1);
+          sheetTranslateY.setValue(screenHeight - (screenHeight * 0.65 * progress));
+        }
       }
     },
     onPanResponderRelease: (evt, gestureState) => {
-      const threshold = screenHeight * 0.3; 
-      if (gestureState.dy > threshold || gestureState.vy > 0.5) {
-        hideSheet();
+      if (isSheetVisible) {
+        const threshold = screenHeight * 0.2;
+        if (gestureState.dy > threshold || gestureState.vy > 0.3) {
+          hideSheet();
+        } else {
+          Animated.spring(sheetTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 120,
+            friction: 6,
+          }).start();
+        }
       } else {
-        Animated.spring(sheetTranslateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 100,
-          friction: 8,
-        }).start();
+        if (gestureState.dy < -30 && selectedMarker) {
+          showSheet();
+        } else {
+          sheetTranslateY.setValue(screenHeight);
+        }
       }
     },
   });
@@ -163,11 +160,9 @@ const MapPage = () => {
       useNativeDriver: true,
     }).start(() => {
       setIsSheetVisible(false);
-      setSheetId(null);
     });
   };
 
-  // Reset zoom function
   const resetZoom = () => {
     Animated.parallel([
       Animated.timing(pan, {
@@ -181,12 +176,11 @@ const MapPage = () => {
         useNativeDriver: false,
       }),
     ]).start();
-
+    
     lastPan.current = { x: 0, y: 0 };
     lastScale.current = 1;
   };
 
-  // Zoom in function
   const zoomIn = () => {
     const newScale = Math.min(4, lastScale.current * 1.5);
     Animated.timing(scale, {
@@ -197,7 +191,6 @@ const MapPage = () => {
     lastScale.current = newScale;
   };
 
-  // Zoom out function
   const zoomOut = () => {
     const newScale = Math.max(0.5, lastScale.current / 1.5);
     Animated.timing(scale, {
@@ -231,20 +224,19 @@ const MapPage = () => {
     return coords;
   };
 
-  // Load POIs from database
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
-
+    
     setLoadingPOIs(true);
     try {
       const pois = await DatabaseApi.getAllPOIsWithImages();
-
+      
       setDbPOIs(pois);
-
+      
     } catch (error) {
       console.error('Failed to load POIs:', error);
       Alert.alert(
-        'Error Loading POIs',
+        'Error Loading POIs', 
         'Failed to load points of interest from the database. Please check your connection and try again.'
       );
     } finally {
@@ -254,11 +246,9 @@ const MapPage = () => {
 
   // Convert database POIs to map markers
   const databaseMarkers = useMemo(() => {
-    // Sort POIs by their ID to ensure ascending order
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
     
     return sortedPOIs.map((poi, index) => {
-      // Use precise map coordinates instead of lat/lng conversion
       const coords = getPOIMapCoordinates(poi.id); 
       const imageUrl = imageUrls.get(poi.imageID);
       
@@ -271,22 +261,19 @@ const MapPage = () => {
         blurb: poi.text || poi.description,
         history: poi.description,
         image: imageUrl ? { uri: imageUrl } : fallbackImg,
-        imageID: poi.imageID, // Store imageID for POIImage component
-        isPOI: true, // Flag to distinguish from seed markers
-        poiData: poi // Store original POI data
+        imageID: poi.imageID,
+        isPOI: true,
+        poiData: poi
       };
     });
   }, [dbPOIs, imageUrls]);
 
-  // Use only database markers
   const allMarkers = useMemo(() => {
     return databaseMarkers;
   }, [databaseMarkers]);
 
-  // Selected marker for bottom sheet
   const selectedMarker = useMemo(() => allMarkers.find(m => m.id === sheetId) ?? null, [sheetId, allMarkers]);
 
-  // Load POIs from database on component mount
   useEffect(() => {
     loadPOIsFromDatabase();
     // Track map page view
@@ -294,7 +281,6 @@ const MapPage = () => {
     Analytics.trackPageView('MapPage');
   }, []);
 
-  // load images when POIs are loaded
   useEffect(() => {
     if (dbPOIs.length > 0) {
       preloadPOIImages(dbPOIs);
@@ -327,7 +313,6 @@ const MapPage = () => {
     };
   }, []);
 
-  // Cleanup listeners on unmount
   useEffect(() => {
     return () => {
       pan.removeAllListeners();
@@ -345,7 +330,7 @@ const MapPage = () => {
               <Text style={styles.backButtonText}>‹ Back</Text>
             </Link>
           </TouchableOpacity>
-          <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+        <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
           <TouchableOpacity style={styles.helpButton}>
             <Link href={'/help' as any} style={styles.helpButtonLink}>
               <Text style={styles.helpButtonText}>?</Text>
@@ -354,10 +339,14 @@ const MapPage = () => {
       </View>
 
       {/* Map with pan and zoom functionality */}
-      <View
+      <TouchableOpacity
         style={styles.mapArea}
         onLayout={onMapLayout}
-        {...panResponder.panHandlers}
+        onPress={() => {
+          setSheetId(null);
+          setIsSheetVisible(false);
+        }}
+        activeOpacity={1}
       >
         <Animated.View
           style={[
@@ -378,9 +367,9 @@ const MapPage = () => {
               width="100%"
               height="100%"
               preserveAspectRatio="xMidYMid meet"
-              style={styles.floor}
+            style={styles.floor}
               pointerEvents="none"
-            />
+          />
           ) : (
             <View style={[styles.floor, styles.floorFallback]} pointerEvents="none" />
           )}
@@ -409,12 +398,12 @@ const MapPage = () => {
             </TouchableOpacity>
           ))}
         </Animated.View>
-      </View>
+      </TouchableOpacity>
 
       {/* Database controls */}
       <View style={styles.editControls} pointerEvents="box-none">
-        <TouchableOpacity
-          style={[styles.editButton, loadingPOIs || isLoadingImages ? styles.editOn : undefined]}
+        <TouchableOpacity 
+          style={[styles.editButton, loadingPOIs || isLoadingImages ? styles.editOn : undefined]} 
           onPress={loadPOIsFromDatabase}
           disabled={loadingPOIs || isLoadingImages}
         >
@@ -425,11 +414,12 @@ const MapPage = () => {
       </View>
 
       {/* Zoom controls */}
-      <View
+      <View 
         style={[
-          styles.zoomControls,
-          selectedMarker && { bottom: '65%' } // Move up when bottom sheet is open
-        ]}
+          styles.zoomControls, 
+          { bottom: '15%' },
+          isSheetVisible && { bottom: '65%' }
+        ]} 
         pointerEvents="box-none"
       >
         <TouchableOpacity style={styles.zoomButton} onPress={zoomIn}>
@@ -441,6 +431,54 @@ const MapPage = () => {
         <TouchableOpacity style={styles.zoomButton} onPress={resetZoom}>
           <Text style={styles.resetButtonText}>⌂</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Bottom banner - always visible */}
+      <View style={styles.bottomBanner}>
+        <View style={styles.bannerHandle} {...handlePanResponder.panHandlers} />
+        <View style={styles.bannerContent}>
+          {selectedMarker && (
+            <>
+              <TouchableOpacity 
+                style={styles.navButton}
+                onPress={() => {
+                  const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                  const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
+                  setSheetId(prev.id);
+                }}
+              >
+                <Text style={styles.navButtonText}>‹</Text>
+              </TouchableOpacity>
+              
+              <View style={styles.bannerCenter}>
+                <View style={styles.bannerIndex}>
+                  <Text style={styles.bannerIndexText}>{selectedMarker.id}</Text>
+                </View>
+                <Text style={styles.bannerTitle}>{selectedMarker.title}</Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.navButton}
+                onPress={() => {
+                  const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                  const next = allMarkers[(idx + 1) % allMarkers.length];
+                  setSheetId(next.id);
+                }}
+              >
+                <Text style={styles.navButtonText}>›</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+        
+        {selectedMarker && (
+          <View style={styles.bannerFooter}>
+            <View style={styles.swipeUpButton}>
+              <Text style={styles.swipeUpIcon}>^</Text>
+              <Text style={styles.swipeUpText}>Swipe up for more information</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Bottom sheet only when a POI is selected */}
@@ -460,17 +498,18 @@ const MapPage = () => {
                 <Text style={styles.pinText}>{selectedMarker.id}</Text>
               </View>
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
-            </View>              <POIImage
-                imageID={selectedMarker.imageID}
-                style={styles.sheetImage}
-                fallbackSource={fallbackImg}
-                resizeMode="cover"
+            </View>
+            
+            <POIImage 
+              imageID={selectedMarker.imageID} 
+              style={styles.sheetImage} 
+              fallbackSource={fallbackImg}
+              resizeMode="cover"
                 containerStyle={styles.imageContainer}
                 onError={(error) => console.error('POI Image Error:', error)}
               />
             
             <View style={styles.contentSection}>
-              <Text style={styles.sectionTitle}>About This Location</Text>
               <Text style={styles.sheetBody}>
                 {selectedMarker.blurb || 'Discover the rich history and significance of this sacred space within St. George\'s Cathedral.'}
               </Text>
@@ -478,8 +517,8 @@ const MapPage = () => {
             
             {selectedMarker.history && selectedMarker.history !== selectedMarker.blurb && (
               <View style={styles.contentSection}>
-                <Text style={styles.sectionTitle}>Historical Significance</Text>
-                <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
+            <Text style={styles.sectionTitle}>Historical Significance</Text>
+            <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
               </View>
             )}
             
@@ -545,8 +584,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 44, // Account for status bar
-    paddingBottom: 16, 
+    paddingTop: 20, 
+    paddingBottom: 12, 
     paddingHorizontal: 20,
     backgroundColor: '#FFFFFF', 
     borderBottomWidth: 1, 
@@ -615,7 +654,8 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: '#FFFFFF', 
     position: 'relative', 
-    overflow: 'hidden' 
+    overflow: 'hidden',
+    paddingBottom: 100, 
   },
   mapContent: { 
     flex: 1, 
@@ -624,7 +664,7 @@ const styles = StyleSheet.create({
   },
   floor: { 
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.9, // Slightly transparent for better contrast
+    opacity: 0.9, 
   },
   floorFallback: {
     backgroundColor: '#f3f4f6',
@@ -689,7 +729,7 @@ const styles = StyleSheet.create({
   },
   pin: { 
     position: 'absolute', 
-    width: 24, // Smaller circles
+    width: 24, 
     height: 24, 
     borderRadius: 12, 
     alignItems: 'center', 
@@ -702,7 +742,6 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    // Remove minWidth and minHeight to keep circles round
   },
   pinText: { 
     color: 'white', 
@@ -725,7 +764,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12, 
     shadowOffset: { width: 0, height: -4 },
     elevation: 8,
-    // Ensure smooth animations
     zIndex: 1000,
   },
   sheetHandle: { 
@@ -859,6 +897,125 @@ const styles = StyleSheet.create({
   pillPrimaryText: { 
     color: 'white',
     fontWeight: '700',
+  },
+  bottomBanner: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 100,
+  },
+  bannerHandle: {
+    alignSelf: 'center',
+    width: 80, 
+    height: 8, 
+    borderRadius: 4,
+    backgroundColor: '#8F000D',
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingBottom: 12,
+  },
+  bannerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  bannerIndex: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#8F000D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  bannerIndexText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+  },
+  bannerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D2D2D',
+    fontFamily: 'Inter-Bold',
+  },
+  navButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFDAD6', 
+    borderWidth: 1,
+    borderColor: '#8F000D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navButtonText: {
+    color: '#8F000D',
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+  },
+  bannerFooter: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    alignItems: 'center',
+  },
+  swipeUpButton: {
+    backgroundColor: '#FFDAD6', 
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#8F000D',
+    minHeight: 36,
+  },
+  swipeUpIcon: {
+    color: '#8F000D',
+    fontSize: 16,
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  swipeUpText: {
+    color: '#8F000D',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+  },
+  bannerDefaultTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#8F000D',
+    fontFamily: 'PlayfairDisplay-Bold',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  bannerDefaultSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
   },
 });
 

@@ -36,7 +36,7 @@ const ThankYou = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF', // White background
+    backgroundColor: '#FFFFFF',
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 40,
@@ -44,13 +44,13 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#9CA3AF', // Light gray
+    color: '#9CA3AF',
     marginBottom: 20,
     fontFamily: 'Inter-Medium',
   },
   mainCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // White background
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 30,
     shadowColor: '#000',
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brand: { 
-    color: '#8F000D', // Primary red
+    color: '#8F000D',
     fontSize: 28, 
     fontWeight: '800', 
     textAlign: 'center',
