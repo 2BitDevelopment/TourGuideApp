@@ -40,3 +40,4 @@ app-example
 .env
 TourGuideApp.code-workspace
 functions/firebase-debug.log
+.firebase/hosting.ZGlzdA.cache
