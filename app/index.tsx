@@ -6,7 +6,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import React from 'react';
-import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // require('dotenv').config();
 
@@ -42,7 +42,8 @@ const CathedralHomePage = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
         <CathedralIcon />
 
         <Text style={styles.title}>St. George’s Cathedral</Text>
@@ -71,43 +72,48 @@ const CathedralHomePage = () => {
             <Text style={styles.buttonText}>Donate</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 2,
-    backgroundColor: primaryColor, 
-    justifyContent: 'center',
+    flex: 1,
+    backgroundColor: primaryColor,
+  },
+  scrollContent: {
+    paddingTop: 40,
+    paddingBottom: 40,
     alignItems: 'center',
   },
   content: {
-    flex: 1,
+    width: '100%',
+    maxWidth: 520,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 30
+    paddingHorizontal: 20,
   },
   buttonsContainer: {
     width: '100%',
     alignItems: 'center'
   },
   title: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: 'bold',
     color: white, 
     textAlign: 'center',
     fontFamily: 'PlayfairDisplay-Black',
-    marginBottom: 18,
+    marginBottom: 14,
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 20,
+    fontSize: 16,
     color: white,
     textAlign: 'center',
-    lineHeight: 28,
-    marginBottom: 38,
+    lineHeight: 22,
+    marginBottom: 28,
     opacity: 0.95,
     fontWeight: '400',
     fontFamily: 'Inter-Regular', 
@@ -119,14 +125,14 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: white,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 26,
     borderWidth: 1,
     borderColor: 'white',
-    marginBottom: 16,
-    minWidth: 260,
-    minHeight: 54,
+    marginBottom: 12,
+    minWidth: 220,
+    minHeight: 50,
     shadowColor: 'black',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -140,7 +146,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: primaryColor, 
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
     fontFamily: 'Inter-Regular',

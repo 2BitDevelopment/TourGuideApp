@@ -1,10 +1,12 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const ThankYou = () => {
   return (
     <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.mainCard}>
         <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
         <Text style={styles.title}>Thank you!</Text>
@@ -18,9 +20,18 @@ const ThankYou = () => {
 
         <View style={styles.contactCard}>
           <Text style={styles.contactHeading}>Contact Us</Text>
-          <Text style={styles.contact}>☎  +27 21 424 7360</Text>
-          <Text style={styles.contact}>✉  reception@sgcathedral.co.za</Text>
-          <Text style={styles.contact}>⌖  5 Wale St, Cape Town, 8001</Text>
+          <View style={styles.contactRow}>
+            <MaterialIcons name="call" size={18} color="#111827" style={{ marginRight: 8 }} />
+            <Text style={styles.contact}>+27 21 424 7360</Text>
+          </View>
+          <View style={styles.contactRow}>
+            <MaterialIcons name="mail-outline" size={18} color="#111827" style={{ marginRight: 8 }} />
+            <Text style={styles.contact}>reception@sgcathedral.co.za</Text>
+          </View>
+          <View style={styles.contactRow}>
+            <MaterialIcons name="location-on" size={18} color="#111827" style={{ marginRight: 8 }} />
+            <Text style={styles.contact}>5 Wale St, Cape Town, 8001</Text>
+          </View>
         </View>
 
         <TouchableOpacity style={styles.backButton}>
@@ -29,6 +40,7 @@ const ThankYou = () => {
           </Link>
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </View>
   );
 };
@@ -36,21 +48,24 @@ const ThankYou = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF', // White background
+    backgroundColor: '#FFFFFF',
     paddingTop: 60,
     paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  scrollContent: {
     paddingBottom: 40,
   },
   pageTitle: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#9CA3AF', // Light gray
+    color: '#9CA3AF',
     marginBottom: 20,
     fontFamily: 'Inter-Medium',
   },
   mainCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // White background
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 30,
     shadowColor: '#000',
@@ -61,7 +76,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brand: { 
-    color: '#8F000D', // Primary red
+    color: '#8F000D',
     fontSize: 28, 
     fontWeight: '800', 
     textAlign: 'center',
@@ -95,6 +110,11 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '100%',
     alignItems: 'flex-start',
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   contactHeading: { 
     fontWeight: '800', 
