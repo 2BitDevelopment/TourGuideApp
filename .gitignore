@@ -41,3 +41,4 @@ app-example
 TourGuideApp.code-workspace
 functions/firebase-debug.log
 .firebase/hosting.ZGlzdA.cache
+.github/copilot-instructions.md
