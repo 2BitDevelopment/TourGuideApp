@@ -4,35 +4,10 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as nodemailer from "nodemailer";
 import PDFDocument from "pdfkit";
 import { mailersendConfig } from "./config";
-import {RateLimiter} from "./rateLimiter";
 
 admin.initializeApp();
 
-
-const reportLimiter = new RateLimiter({
-  maxRequests: 5,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  blockDurationMs: 2 * 60 * 60 * 1000 // 2 hours
-});
-
 export const generateReport = onRequest(async (req, res) => {
-
-const identifier = req.headers['x-forwarded-for']?.split(',')[0] ||
-                  
-                   req.connection?.remoteAddress ||
-                   req.socket?.remoteAddress ||
-                   'unknown';
-
-    const isLimited = await reportLimiter.isRateLimited(identifier);
-
-    if (isLimited) {
-        res.status(429).json({
-            error: 'Too many requests',
-            message: 'Please try again later',
-            retryAfter:3600
-        });
-        return;
-    }
   try {
     const db = admin.firestore();
 
