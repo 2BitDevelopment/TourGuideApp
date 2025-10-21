@@ -143,8 +143,12 @@ export const sendMonthlyReport = onSchedule(
     // Send Email
     await sendEmail(pdfBuffer, "TourApp Analytics Report - Monthly");
   });
-
-async function generatePdfReport(views: number, clicks: number, topPOIs: { name: string; views: number }[], durationStats: { short: number; medium: number; long: number }) {
+async function generatePdfReport(
+  views: number,
+  clicks: number,
+  topPOIs: { name: string; views: number }[],
+  durationStats: { short: number; medium: number; long: number }
+) {
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40 });
     const chunks: Buffer[] = [];
@@ -155,51 +159,49 @@ async function generatePdfReport(views: number, clicks: number, topPOIs: { name:
 
     // Header with Website Analytics and 2BIT
     doc.fontSize(28)
-      .fillColor('#4A90A4')
+      .fillColor("#4A90A4")
       .text("Website Analytics", 60, 60, { continued: true })
-      .fillColor('#2C5F6F')
+      .fillColor("#2C5F6F")
       .fontSize(32)
-      .text(" 2BIT", { align: 'right' });
+      .text(" 2BIT", { align: "right" });
 
     // Date range and contact info
     const currentDate = new Date();
-    const endMonth = currentDate.toLocaleDateString('en-US', { month: 'long' });
+    const endMonth = currentDate.toLocaleDateString("en-US", { month: "long" });
     const year = currentDate.getFullYear();
 
-    doc.fontSize(10)
-      .fillColor('#666666')
+    doc
+      .fontSize(10)
+      .fillColor("#666666")
       .text(`March to ${endMonth} ${year}`, 60, 110)
-      .text("Contact: jwehart.7@gmail.com", { align: 'right', continued: false });
+      .text("Contact: jwehart.7@gmail.com", { align: "right", continued: false });
 
     // Large visitor count
-    doc.fontSize(72)
-      .fillColor('#4A90A4')
-      .text(views.toString(), 60, 160);
+    doc.fontSize(72).fillColor("#4A90A4").text(views.toString(), 60, 160);
 
-    doc.fontSize(24)
-      .fillColor('#333333')
-      .text("Visitors", 200, 200);
+    doc.fontSize(24).fillColor("#333333").text("Visitors", 200, 200);
 
     // Horizontal line
-    doc.strokeColor('#CCCCCC')
+    doc
+      .strokeColor("#CCCCCC")
       .lineWidth(1)
       .moveTo(60, 250)
       .lineTo(540, 250)
       .stroke();
 
     // Top 5 Spots section with table styling
-    doc.fontSize(16)
-      .fillColor('#4A90A4')
-      .text("Top 5 Spots", 60, 280);
+    doc.fontSize(16).fillColor("#4A90A4").text("Top 5 Spots", 60, 280);
 
     // Table header background
-    doc.rect(60, 310, 200, 25)
-      .fillColor('#E8F4F8')
+    doc
+      .rect(60, 310, 200, 25)
+      .fillColor("#E8F4F8")
       .fill();
 
     // Table border
-    doc.rect(60, 310, 200, 25 + (Math.min(topPOIs.length, 5) * 25))
-      .strokeColor('#CCCCCC')
+    doc
+      .rect(60, 310, 200, 25 + Math.min(topPOIs.length, 5) * 25)
+      .strokeColor("#CCCCCC")
       .lineWidth(1)
       .stroke();
 
@@ -209,128 +211,167 @@ async function generatePdfReport(views: number, clicks: number, topPOIs: { name:
       topPOIs.slice(0, 5).forEach((poi, index) => {
         // Alternate row background
         if (index % 2 === 1) {
-          doc.rect(60, yPosition - 5, 200, 25)
-            .fillColor('#F8F8F8')
+          doc
+            .rect(60, yPosition - 5, 200, 25)
+            .fillColor("#F8F8F8")
             .fill();
         }
 
-        doc.fontSize(12)
-          .fillColor('#333333')
-          .text(`${index + 1}. ${poi.name.split(' (ID:')[0]}`, 70, yPosition);
+        doc.fontSize(12).fillColor("#333333").text(`${index + 1}. ${poi.name.split(" (ID:")[0]}`, 70, yPosition);
 
         yPosition += 25;
       });
     } else {
-      doc.fontSize(12)
-        .fillColor('#666666')
-        .text("No data available", 70, yPosition);
+      doc.fontSize(12).fillColor("#666666").text("No data available", 70, yPosition);
     }
 
     // Session Duration section title
-    doc.fontSize(16)
-      .fillColor('#4A90A4')
-      .text("Session Duration", 330, 350);
+    doc.fontSize(16).fillColor("#4A90A4").text("Session Duration", 330, 300);
 
-    // Session Duration Pie Chart
+    // Pie chart center/radius
     const centerX = 420;
     const centerY = 400;
     const radius = 60;
+
+    // Helper: draw a pie slice between startAngle and endAngle (radians)
+    // Uses cubic Bezier arc approximation; splits large arcs into <= 90deg segments
+    function drawPieSlice(
+      d: PDFKit.PDFDocument,
+      cx: number,
+      cy: number,
+      r: number,
+      startAngle: number,
+      endAngle: number,
+      fillColor: string
+    ) {
+      // Normalize direction (we'll draw in positive direction)
+      let delta = endAngle - startAngle;
+      const clockwise = delta >= 0;
+      if (!clockwise) {
+        // ensure positive sweep by swapping
+        const tmp = startAngle;
+        startAngle = endAngle;
+        endAngle = tmp;
+        delta = endAngle - startAngle;
+      }
+
+      // if the delta is 0 (no slice) do nothing
+      if (Math.abs(delta) < 1e-6) return;
+
+      // split into segments of max PI/2 (90 degrees)
+      const maxSeg = Math.PI / 2;
+      const segments = Math.ceil(Math.abs(delta) / maxSeg);
+      const segAngle = delta / segments;
+
+      d.save();
+      d.fillColor(fillColor);
+      d.moveTo(cx, cy);
+
+      // compute first point and line to it
+      const x0 = cx + r * Math.cos(startAngle);
+      const y0 = cy + r * Math.sin(startAngle);
+      d.lineTo(x0, y0);
+
+      for (let i = 0; i < segments; i++) {
+        const theta1 = startAngle + i * segAngle;
+        const theta2 = startAngle + (i + 1) * segAngle;
+        const t = theta2 - theta1;
+
+        // control point magic number
+        const k = (4 / 3) * Math.tan(t / 4);
+
+        // points on unit circle
+        const p0x = cx + r * Math.cos(theta1);
+        const p0y = cy + r * Math.sin(theta1);
+        const p3x = cx + r * Math.cos(theta2);
+        const p3y = cy + r * Math.sin(theta2);
+
+        // control points
+        const cp1x = p0x - k * r * Math.sin(theta1);
+        const cp1y = p0y + k * r * Math.cos(theta1);
+        const cp2x = p3x + k * r * Math.sin(theta2);
+        const cp2y = p3y - k * r * Math.cos(theta2);
+
+        // For the first segment, we already moved-to the start point; for subsequent segments that's fine.
+        d.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p3x, p3y);
+      }
+
+      d.closePath();
+      d.fill();
+      d.restore();
+    }
 
     // Calculate total sessions and percentages
     const totalSessions = durationStats.short + durationStats.medium + durationStats.long;
 
     if (totalSessions > 0) {
-      const shortPercent = durationStats.short / totalSessions;
-      const mediumPercent = durationStats.medium / totalSessions;
+      // Determine start angle (0 at 3 o'clock). You can shift by -Math.PI/2 if you want top start.
+      let angleCursor = 0; // start at 3 o'clock
 
-      // Draw base circle (long sessions - largest or default)
-      doc.circle(centerX, centerY, radius)
-        .fillColor('#87CEEB')
-        .fill();
+      const colors = {
+        short: "#4A90A4", // under 10
+        medium: "#6BB6FF", // 10-20
+        long: "#87CEEB" // 20+
+      };
 
-      // Draw medium sessions segment if it exists (approximate with bezier curves)
-      if (durationStats.medium > 0 && mediumPercent > 0.1) {
-        doc.save();
-        doc.fillColor('#6BB6FF');
-        doc.moveTo(centerX, centerY);
-        doc.lineTo(centerX + radius, centerY);
+      const slices: Array<{ value: number; key: "short" | "medium" | "long"; color: string }> = [
+        { value: durationStats.long, key: "long", color: colors.long },
+        { value: durationStats.medium, key: "medium", color: colors.medium },
+        { value: durationStats.short, key: "short", color: colors.short }
+      ];
 
-        // Approximate arc with bezier curve based on percentage
-        const controlFactor = Math.min(mediumPercent * 2, 1);
-        doc.bezierCurveTo(
-          centerX + radius, centerY - radius * controlFactor,
-          centerX + radius * (1 - controlFactor), centerY - radius,
-          centerX - radius * 0.5, centerY - radius * 0.8
-        );
-        doc.closePath();
-        doc.fill();
-        doc.restore();
+      // Draw each slice if > 0; ordering chosen so long is drawn first (back) — matches legend order earlier
+      for (const s of slices) {
+        if (s.value <= 0) continue;
+        const sliceAngle = (s.value / totalSessions) * Math.PI * 2;
+        const start = angleCursor;
+        const end = angleCursor + sliceAngle;
+
+        drawPieSlice(doc, centerX, centerY, radius, start, end, s.color);
+
+        angleCursor = end;
       }
 
-      // Draw short sessions segment if it exists (smallest segment)
-      if (durationStats.short > 0 && shortPercent > 0.1) {
-        doc.save();
-        doc.fillColor('#4A90A4');
-        doc.moveTo(centerX, centerY);
-
-        // Position based on other segments
-        if (durationStats.medium > 0) {
-          doc.lineTo(centerX - radius * 0.5, centerY - radius * 0.8);
-          const controlFactor = Math.min(shortPercent * 2, 0.8);
-          doc.bezierCurveTo(
-            centerX - radius * 0.9, centerY - radius * 0.3,
-            centerX - radius * 0.9, centerY + radius * 0.3,
-            centerX - radius * 0.5, centerY + radius * controlFactor
-          );
-        } else {
-          doc.lineTo(centerX + radius, centerY);
-          const controlFactor = Math.min(shortPercent * 2, 1);
-          doc.bezierCurveTo(
-            centerX + radius, centerY - radius * controlFactor,
-            centerX + radius * (1 - controlFactor), centerY - radius,
-            centerX - radius * 0.3, centerY - radius * 0.7
-          );
-        }
-        doc.closePath();
-        doc.fill();
-        doc.restore();
-      }
+      // (Optional) draw a subtle circle border
+      doc
+        .circle(centerX, centerY, radius)
+        .lineWidth(0.5)
+        .strokeColor("#CCCCCC")
+        .stroke();
     } else {
       // No data available - show empty circle
-      doc.circle(centerX, centerY, radius)
-        .fillColor('#E0E0E0')
+      doc
+        .circle(centerX, centerY, radius)
+        .fillColor("#E0E0E0")
         .fill();
     }
 
     // Legend with actual data
     const legendY = 480;
 
-    doc.rect(330, legendY, 12, 12)
-      .fillColor('#4A90A4')
+    doc
+      .rect(330, legendY, 12, 12)
+      .fillColor("#4A90A4")
       .fill();
-    doc.fontSize(10)
-      .fillColor('#666666')
-      .text(`Under 10 min (${durationStats.short})`, 350, legendY + 2);
+    doc.fontSize(10).fillColor("#666666").text(`Under 10 min (${durationStats.short})`, 350, legendY + 2);
 
-    doc.rect(330, legendY + 20, 12, 12)
-      .fillColor('#6BB6FF')
+    doc
+      .rect(330, legendY + 20, 12, 12)
+      .fillColor("#6BB6FF")
       .fill();
     doc.text(`10-20 min (${durationStats.medium})`, 350, legendY + 22);
 
-    doc.rect(330, legendY + 40, 12, 12)
-      .fillColor('#87CEEB')
+    doc
+      .rect(330, legendY + 40, 12, 12)
+      .fillColor("#87CEEB")
       .fill();
     doc.text(`20+ min (${durationStats.long})`, 350, legendY + 42);
 
-    // Add total sessions count
-    doc.fontSize(12)
-      .fillColor('#4A90A4')
-      .text(`Total Sessions: ${totalSessions}`, 330, legendY + 65);
-
     // Footer
-    doc.fontSize(10)
-      .fillColor('#666666')
-      .text("This report includes data from the St. George's Cathedral mobile tour guide website.", 60, 580, {
+    doc
+      .fontSize(10)
+      .fillColor("#666666")
+      .text("This report includes data from the St. George's Cathedral mobile tour guide website.", 60, 680, {
         align: "center",
         width: 480
       });
@@ -338,6 +379,7 @@ async function generatePdfReport(views: number, clicks: number, topPOIs: { name:
     doc.end();
   });
 }
+
 
 async function sendEmail(attachment: Buffer, subject: string) {
   console.log("Preparing to send email...");
