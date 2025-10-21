@@ -5,6 +5,7 @@ import { Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollVie
 import { SvgUri } from 'react-native-svg';
 import { POIImage } from '../components/POIImage';
 import { useImageLoading } from '../hooks/useImageLoading';
+import { useSessionTracking } from '../hooks/useSessionTracking';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
 import { Analytics } from '../util/Analytics';
 
@@ -44,6 +45,9 @@ const MapPage = () => {
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
+  
+  // Session tracking hook - returns updateActivity function
+  const updateActivity = useSessionTracking('MapPage');
 
   const onMapLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -62,6 +66,9 @@ const MapPage = () => {
       return Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10 || evt.nativeEvent.touches.length === 2;
     },
     onPanResponderGrant: () => {
+      // Track user activity when they start interacting with the map
+      updateActivity();
+      
       pan.setOffset({
         x: lastPan.current.x,
         y: lastPan.current.y,
@@ -172,6 +179,12 @@ const MapPage = () => {
 
   // Sheet animation 
   const showSheet = () => {
+    // Track POI view when sheet opens
+    if (selectedMarker) {
+      updateActivity();
+      Analytics.trackPOIView(selectedMarker.originalId || selectedMarker.id, selectedMarker.title);
+    }
+    
     setIsSheetVisible(true);
     Animated.timing(sheetTranslateY, {
       toValue: 0,
@@ -260,9 +273,8 @@ const MapPage = () => {
 
   useEffect(() => {
     loadPOIsFromDatabase();
-    // Track map page view
+    // Track map page view (page view tracking is handled by useSessionTracking)
     Analytics.trackMapView();
-    Analytics.trackPageView('MapPage');
   }, []);
 
   useEffect(() => {
@@ -369,7 +381,8 @@ const MapPage = () => {
                 backgroundColor: '#991b1b'
               }]}
               onPress={() => {
-                // Track POI click analytics
+                // Update activity and track POI click analytics
+                updateActivity();
                 Analytics.trackPOIClick(m.originalId || m.id, m.title);
                 
                 setSheetId(m.id);
@@ -401,6 +414,7 @@ const MapPage = () => {
               <TouchableOpacity 
                 style={styles.navButton}
                 onPress={() => {
+                  updateActivity();
                   const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
                   const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
                   setSheetId(prev.id);
@@ -419,6 +433,7 @@ const MapPage = () => {
               <TouchableOpacity 
                 style={styles.navButton}
                 onPress={() => {
+                  updateActivity();
                   const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
                   const next = allMarkers[(idx + 1) % allMarkers.length];
                   setSheetId(next.id);
@@ -456,7 +471,10 @@ const MapPage = () => {
           >
             <TouchableOpacity
               style={styles.sheetBackButton}
-              onPress={hideSheet}
+              onPress={() => {
+                updateActivity();
+                hideSheet();
+              }}
               accessibilityRole="button"
             >
               <Text style={styles.sheetBackText}>‹ Back</Text>
@@ -469,7 +487,11 @@ const MapPage = () => {
             contentContainerStyle={{ paddingBottom: 16 }} 
             showsVerticalScrollIndicator={false}
             scrollEventThrottle={16}
-            onScroll={(e) => { sheetScrollY.current = e.nativeEvent.contentOffset.y; }}
+            onScroll={(e) => { 
+              sheetScrollY.current = e.nativeEvent.contentOffset.y;
+              // Track activity on scroll to show user is actively engaged
+              updateActivity();
+            }}
             overScrollMode={'never'}
           >
             <View style={styles.sheetHeaderRow}>
@@ -510,6 +532,7 @@ const MapPage = () => {
             <TouchableOpacity
               style={styles.navPill}
               onPress={() => {
+                updateActivity();
                 const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
                 const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
                 setSheetId(prev.id);
@@ -524,6 +547,7 @@ const MapPage = () => {
               <TouchableOpacity
                 style={styles.audioCircle}
                 onPress={() => {
+                  updateActivity();
                   if (selectedMarker) {
                     Analytics.trackPOIInteraction(
                       selectedMarker.originalId || selectedMarker.id,
@@ -543,6 +567,7 @@ const MapPage = () => {
             <TouchableOpacity
               style={styles.navPill}
               onPress={() => {
+                updateActivity();
                 const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
                 const next = allMarkers[(idx + 1) % allMarkers.length];
                 setSheetId(next.id);
