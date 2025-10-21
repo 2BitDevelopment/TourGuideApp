@@ -10,36 +10,31 @@ service cloud.firestore {
     // Analytics collections - write-only for app, read for admin
     match /website_views/{document} {
       allow read: if false; // Only Firebase Admin SDK can read
-      allow write: if request.time < timestamp.date(2026, 12, 31) // Prevent spam
-                   && request.resource.data.keys().hasAll(['timestamp', 'sessionId'])
+      allow write: if request.resource.data.keys().hasAll(['timestamp', 'sessionId'])
                    && request.resource.data.timestamp is timestamp;
     }
     
     match /map_views/{document} {
       allow read: if false;
-      allow write: if request.time < timestamp.date(2026, 12, 31)
-                   && request.resource.data.keys().hasAll(['timestamp', 'sessionId'])
+      allow write:  request.resource.data.keys().hasAll(['timestamp', 'sessionId'])
                    && request.resource.data.timestamp is timestamp;
     }
     
     match /poi_views/{document} {
       allow read: if false;
-      allow write: if request.time < timestamp.date(2026, 12, 31)
-                   && request.resource.data.keys().hasAll(['timestamp', 'sessionId', 'poiId'])
+      allow write:  request.resource.data.keys().hasAll(['timestamp', 'sessionId', 'poiId'])
                    && request.resource.data.timestamp is timestamp;
     }
     
     match /poi_clicks/{document} {
       allow read: if false;
-      allow write: if request.time < timestamp.date(2026, 12, 31)
-                   && request.resource.data.keys().hasAll(['timestamp', 'sessionId', 'poiId'])
+      allow write:  request.resource.data.keys().hasAll(['timestamp', 'sessionId', 'poiId'])
                    && request.resource.data.timestamp is timestamp;
     }
     
     match /poi_interactions/{document} {
       allow read: if false;
-      allow write: if request.time < timestamp.date(2026, 12, 31)
-                   && request.resource.data.keys().hasAll(['timestamp', 'sessionId', 'poiId'])
+      allow write:  request.resource.data.keys().hasAll(['timestamp', 'sessionId', 'poiId'])
                    && request.resource.data.timestamp is timestamp;
     }
     

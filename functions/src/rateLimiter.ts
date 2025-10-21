@@ -23,7 +23,9 @@ export class RateLimiter {
         const windowStart = now - this.config.windowMs;
         const blockUntil = now + (this.config.blockDurationMs || 60000);
 
-        const rateLimitRef = this.db.collection('rateLimits').doc(identifier);
+
+    const shardID = this.getShardID();
+        const rateLimitRef = this.db.collection('rateLimits').doc(`${identifier}-${shardID}`);
 
         try {
             const result = await this.db.runTransaction(async (transaction) => {
@@ -58,10 +60,14 @@ export class RateLimiter {
                 }
 
                 // add current request
+                const max = this.config.maxRequests*2;
+                const trimmedRequest = recentRequests.slice(-max); 
+                //sets so does not infinitely grow with time stamps
                 transaction.update(rateLimitRef, {
-                    requests: [...recentRequests, now],
+                    requests: [...trimmedRequest, now],
                     blocked: false,
-                    blockedUntil: null
+                    blockedUntil: null,
+                    expiresAt: admin.firestore.Timestamp.fromMillis(now + 24 * 60 * 60 * 1000)
                 });
                 return false;
             });
@@ -106,6 +112,11 @@ export class RateLimiter {
         
         return sessionId || ip;
     }
+
+//to stop sharding(same IP address writing to same doc)
+private getShardID(shardCount: number=10): number {
+return Math.floor(Math.random() * shardCount);
+}
 }
 
 // default singleton of the limiter
