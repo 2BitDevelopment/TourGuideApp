@@ -366,7 +366,7 @@ const MapPage = () => {
               style={[styles.pin, {
                 left: `${m.x * 100}%`,
                 top: `${m.y * 100}%`,
-                backgroundColor: '#991b1b'
+                backgroundColor: '#8F000D'
               }]}
               onPress={() => {
                 // Track POI click analytics
@@ -462,7 +462,7 @@ const MapPage = () => {
               <Text style={styles.sheetBackText}>‹ Back</Text>
             </TouchableOpacity>
             <View style={styles.sheetTopHandle} />
-            <View style={{ width: 48 }} />
+            <View style={{ width: 80 }} />
           </View>
           <ScrollView 
             style={{ flex: 1 }} 
@@ -664,10 +664,11 @@ const styles = StyleSheet.create({
     color: '#8F000D', 
     fontSize: 20, 
     fontWeight: '800', 
-    textAlign: 'center',
+    textAlign: 'left',
     fontFamily: 'PlayfairDisplay-Bold',
     letterSpacing: 0.5,
     flex: 1,
+    paddingLeft: 40,
   },
   mapArea: { 
     flex: 1, 
