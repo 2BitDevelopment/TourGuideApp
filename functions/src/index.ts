@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { onRequest } from "firebase-functions/https";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as nodemailer from "nodemailer";
 import PDFDocument from "pdfkit";
@@ -15,8 +15,10 @@ if (!admin.apps.length) {
   }
 }
 
-export const generateReport = onRequest(async (req, res) => {
+export const generateReport = onCall({enforceAppCheck: true}, async (request) => {
+//enforceAppCheck: true allows appcheck to validate
   try {
+
     console.log("Starting report generation...");
     
     // Check if Firebase Admin is properly initialized
@@ -74,11 +76,11 @@ export const generateReport = onRequest(async (req, res) => {
     try {
       await sendEmail(pdfBuffer, "Website Analytics Report - Manual");
       console.log("Email sent successfully!");
-      res.status(200).send("Report generated and sent successfully!");
+     return { success: true, message: "Report generated and emailed successfully." };
     } catch (emailError) {
       console.error("Email sending failed, but PDF was generated successfully:", emailError);
       // Return success but mention email issue
-      res.status(200).send("Report generated successfully, but email delivery failed. Please check email configuration.");
+      return { success: true, message: "Report generated successfully, but email delivery failed. Please check email configuration." };
     }
   } catch (error) {
     console.error("Error generating report:", error);
@@ -90,7 +92,9 @@ export const generateReport = onRequest(async (req, res) => {
       console.error("Error stack:", error.stack);
     }
 
-    res.status(500).send(`Error generating report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+throw new HttpsError(
+  "internal", "Failed to generate report: ${error instanceof Error ? error.message : 'Unknown error'}"
+      );
   }
 });
 
