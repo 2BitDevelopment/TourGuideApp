@@ -6,7 +6,9 @@ export const firebaseConfig = {
   storageBucket: process.env.EXPO_PUBLIC_storageBucket,
   messagingSenderId: process.env.EXPO_PUBLIC_messagingSenderId,
   appId: process.env.EXPO_PUBLIC_appId,
-  measurementId: process.env.EXPO_PUBLIC_measurementId
+  measurementId: process.env.EXPO_PUBLIC_measurementId,
+  reCAPTCHAEnterpriseSiteKey: process.env.EXPO_PUBLIC_reCAPTCHAEnterpriseSiteKey
+
 };
 
 // Collection names
