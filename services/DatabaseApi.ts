@@ -110,7 +110,7 @@ export class DatabaseApi {
             name: data.location?.name || ''
           },
           description: data.description || '',
-          imageID: `${data.imageID || data.id}` 
+          imageID: `${data.imageID || ''}` 
         };
       }
       
