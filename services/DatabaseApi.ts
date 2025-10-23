@@ -74,10 +74,10 @@ export class DatabaseApi {
             name: data.location?.name || ''
           },
           description: data.description || '',
-          imageID: `${data.id || doc.id}.jpg`
+          imageID: `${data.imageID || ''}`
         };
         
-        POIs.push(poi);
+        POIs.push(poi); 
       });
       
       return POIs;
@@ -110,7 +110,7 @@ export class DatabaseApi {
             name: data.location?.name || ''
           },
           description: data.description || '',
-          imageID: `${data.id || docSnap.id}.jpg` 
+          imageID: `${data.imageID || ''}` 
         };
       }
       

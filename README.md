@@ -1,16 +1,35 @@
-# TourGuideApp
-This repository is used for the application's code.
+# St. George's Cathedral Tour Guide App
 
+A React Native/Expo mobile app providing an interactive virtual tour experience for St. George's Cathedral in Cape Town, featuring an SVG-based indoor map, Firebase backend, and POI (Point of Interest) system.
 
-<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<a id="readme-top"></a>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
+## Quick Start
+
+### Development
+```bash
+npm install
+expo start --dev-client  # For development builds
+expo start --web         # For web testing
+```
+
+### Deployment
+
+#### Web Hosting
+Deploy the web version to Firebase Hosting:
+```bash
+npm run predeploy        # Exports web build
+npm run deploy-hosting   # Deploys to Firebase Hosting
+```
+
+#### Firebase Functions
+Deploy backend functions:
+```bash
+cd functions
+npm install
+npm run build
+firebase deploy --only functions
+```
+
+---
 
 
 
