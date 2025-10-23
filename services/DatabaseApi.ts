@@ -1,10 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  getFirestore
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    getFirestore
 } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import { POI } from '../types/database';

@@ -191,22 +191,44 @@ const MapPage = () => {
   };
 
 
-  // Returns fixed coordinates for poi's and converts to % to position it x% from side and y% from top
+  // Returns percentage coordinates for poi's (0-1 range, scales with map size)
   const getPOIMapCoordinates = (poiId: number) => {
-  
     const poiCoordinates: Record<number, { x: number, y: number }> = {
-      1: { x: 0.3, y: 0.4 },    
-      2: { x: 0.7, y: 0.6 },     
-      3: { x: 0.5, y: 0.8 }, 
-      4: { x: 0.2, y: 0.7 },     
+      1: { x: 0.15, y: 0.25 },   // Entrance area
+      2: { x: 0.35, y: 0.20 },   // Nave left side
+      3: { x: 0.55, y: 0.15 },   // Nave center
+      4: { x: 0.75, y: 0.25 },   // Nave right side
+      5: { x: 0.85, y: 0.40 },   // Side chapel
+      6: { x: 0.80, y: 0.60 },   // Altar area
+      7: { x: 0.65, y: 0.70 },   // Choir area
+      8: { x: 0.45, y: 0.75 },   // Center back
+      9: { x: 0.25, y: 0.70 },   // Left side back
+      10: { x: 0.10, y: 0.55 },  // Left side chapel
+      11: { x: 0.20, y: 0.40 },  // Left nave
+      12: { x: 0.40, y: 0.35 }, // Left center
+      13: { x: 0.60, y: 0.45 }, // Center area
+      14: { x: 0.70, y: 0.30 }, // Right center
+      15: { x: 0.50, y: 0.60 }, // Center altar
+      16: { x: 0.30, y: 0.55 }, // Left altar area
+      17: { x: 0.90, y: 0.80 }, // Far right corner
+      18: { x: 0.05, y: 0.30 }, // Far left entrance
+      19: { x: 0.95, y: 0.35 }, // Far right side
+      20: { x: 0.12, y: 0.65 }, // Left side middle
+      21: { x: 0.88, y: 0.75 }, // Right side back
+      22: { x: 0.18, y: 0.15 }, // Left front
+      23: { x: 0.82, y: 0.20 }, // Right front
+      24: { x: 0.48, y: 0.25 }, // Center front
+      25: { x: 0.58, y: 0.80 }, // Center back
+      26: { x: 0.38, y: 0.50 }, // Left center
+      27: { x: 0.68, y: 0.50 }, // Right center
     };
     
-    
     const coords = poiCoordinates[poiId] || { x: 0.5, y: 0.5 };
-    
-   
     return coords;
   };
+
+
+  
 
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
