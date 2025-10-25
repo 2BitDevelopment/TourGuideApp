@@ -1,4 +1,4 @@
-import { black, primaryColor, secondaryColor, surfaceColor, surfaceVariantColor } from '@/constants/Colors';
+import { Colours } from '@/constants/Colours';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
@@ -8,15 +8,15 @@ const FirstThursdays = () => {
   return (
     <View style={styles.container}>
       <View style={styles.footer}>
-  <TouchableOpacity style={styles.backButton}>
-    <Link href="/" asChild>
-      <View style={styles.backContent}>
-        <MaterialIcons name="arrow-back" size={12} color={primaryColor} style={{ marginRight: 4, textAlignVertical: 'center' }} />
-        <Text style={styles.backTextLabel}>Back</Text>
+        <TouchableOpacity style={styles.backButton}>
+          <Link href="/" asChild>
+            <View style={styles.backContent}>
+              <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+              <Text style={styles.backTextLabel}>Back</Text>
+            </View>
+          </Link>
+        </TouchableOpacity>
       </View>
-    </Link>
-  </TouchableOpacity>
-</View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.contentContainer}>
@@ -54,19 +54,19 @@ const FirstThursdays = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: Colours.surfaceColour },
   scroll: {
     padding: 24,
     paddingBottom: 120,
-    paddingTop: 60, // Move content lower
+    paddingTop: 60,
   },
   contentContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colours.white,
     borderRadius: 24,
     padding: 20,
     marginHorizontal: 8,
     marginTop: 50,
-        shadowColor: '#000000',
+    shadowColor: Colours.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 32,
-    color: primaryColor,
+    color: Colours.primaryColour,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 10,
@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
   cardLarge: {
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: primaryColor,
-    backgroundColor: surfaceVariantColor,
+    borderColor: Colours.primaryColour,
+    backgroundColor: Colours.surfaceVariantColour,
     padding: 20,
     marginBottom: 18,
     maxWidth: 400,
@@ -96,8 +96,8 @@ const styles = StyleSheet.create({
   cardSmall: {
     borderRadius: 20,
     borderWidth: 2,
-    backgroundColor: surfaceColor,
-    borderColor: primaryColor,
+    backgroundColor: Colours.surfaceColour,
+    borderColor: Colours.primaryColour,
     padding: 20,
     marginBottom: 18,
     alignItems: 'center',
@@ -109,14 +109,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 12,
-    color: primaryColor,
+    color: Colours.primaryColour,
     textAlign: 'left',
     fontFamily: 'Inter-Bold',
   },
   smallTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: primaryColor,
+    color: Colours.primaryColour,
     marginBottom: 12,
     textAlign: 'center',
     fontFamily: 'Inter-Medium',
@@ -124,20 +124,27 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontWeight: '400',
-    color: secondaryColor,
+    color: Colours.black,
     marginBottom: 2,
     textAlign: 'center',
     fontFamily: 'Inter-Medium',
   },
-  bullets: { gap: 8 },
-  bullet: { fontSize: 18, color: black, marginBottom: 2, fontFamily: 'Inter-Regular' },
+  bullets: { 
+    gap: 8 
+  },
+  bullet: { 
+    fontSize: 18, 
+    color: Colours.black, 
+    marginBottom: 2, 
+    fontFamily: 'Inter-Regular' 
+  },
   eventButton: {
-    backgroundColor: primaryColor,
+    backgroundColor: Colours.primaryColour,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 25,
     marginTop: 8,
-    shadowColor: '#000000',
+    shadowColor: Colours.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -155,20 +162,20 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 24,
     borderTopWidth: 1,
-    borderTopColor: '#FFDAD6',
+    borderTopColor: Colours.surfaceVariantColour,
     alignItems: 'center',
-    backgroundColor: surfaceColor,
+    backgroundColor: Colours.surfaceColour,
   },
   footerText: {
     fontSize: 16,
     fontWeight: '700',
-    color: primaryColor,
+    color: Colours.primaryColour,
     fontFamily: 'PlayfairDisplay-Bold',
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colours.black,
     fontFamily: 'Inter-Regular',
     fontStyle: 'italic',
   },
@@ -180,8 +187,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButton: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#8F000D',
+    backgroundColor: Colours.white,
+    borderColor: Colours.primaryColour,
     borderWidth: 1,
     borderRadius: 20,
     minWidth: 80,
@@ -191,24 +198,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-backContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-backTextLabel: {
-  color: primaryColor,
-  fontSize: 14,
-  fontWeight: '600',
-  fontFamily: 'Inter-Medium',
-  marginLeft: 2,
-},
+  backContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backTextLabel: {
+    color: Colours.primaryColour,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+    marginLeft: 2,
+  },
 });
 
 export default FirstThursdays;

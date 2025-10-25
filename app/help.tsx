@@ -1,3 +1,5 @@
+import { Colours } from '@/constants/Colours';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -8,17 +10,16 @@ const HelpPage = () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
-        {/* Back Button */}
+          
         <TouchableOpacity style={styles.backButton}>
           <Link href="/MapPage" style={styles.backButtonLink}>
-            <Text style={styles.backButtonText}>‹ Back</Text>
+            <MaterialIcons name="arrow-back" size={12} color={Colours.primaryColour} style={{ marginRight: 4, textAlignVertical: 'center' }} />
+            <Text style={styles.backButtonText}>Back</Text>
           </Link>
         </TouchableOpacity>
 
-        {/* Help Title */}
         <Text style={styles.title}>Help</Text>
 
-        {/* POI Image */}
         <View style={styles.cathedralImage}>
           <POIImage
             imageID="2.jpg"
@@ -30,7 +31,6 @@ const HelpPage = () => {
 
         {/* Instructions List */}
         <View style={styles.instructionsContainer}>
-          {/* Instruction 1 */}
           <View style={styles.instructionItem}>
             <View style={styles.instructionNumber}>
               <Text style={styles.numberText}>1</Text>
@@ -40,7 +40,6 @@ const HelpPage = () => {
             </Text>
           </View>
 
-          {/* Instruction 2 */}
           <View style={styles.instructionItem}>
             <View style={styles.instructionNumber}>
               <Text style={styles.numberText}>2</Text>
@@ -50,7 +49,6 @@ const HelpPage = () => {
             </Text>
           </View>
 
-          {/* Instruction 3 */}
           <View style={styles.instructionItem}>
             <View style={styles.instructionNumber}>
               <Text style={styles.numberText}>3</Text>
@@ -60,7 +58,6 @@ const HelpPage = () => {
             </Text>
           </View>
 
-          {/* Instruction 4 */}
           <View style={styles.instructionItem}>
             <View style={styles.instructionNumber}>
               <Text style={styles.numberText}>4</Text>
@@ -71,7 +68,6 @@ const HelpPage = () => {
           </View>
         </View>
 
-        {/* Church Footer */}
         <View style={styles.churchFooter}>
           <Text style={styles.footerText}>St. George's Cathedral</Text>
           <Text style={styles.footerSubtext}>The People's Cathedral</Text>
@@ -85,14 +81,14 @@ const HelpPage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: Colours.surfaceColour,
   },
   scrollContent: {
     paddingVertical: 20,
   },
   content: {
     flex: 1,
-    backgroundColor: '#OOOOOO', 
+    backgroundColor: Colours.surfaceColour, 
     margin: 20,
     borderRadius: 20,
     padding: 20,
@@ -107,10 +103,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colours.white,
     borderWidth: 1,
-    borderColor: '#8F000D',
-    shadowColor: '#8F000D',
+    borderColor: Colours.primaryColour,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -121,7 +117,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
@@ -130,7 +126,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#8F000D',
+    color: Colours.primaryColour,
     textAlign: 'center',
     fontFamily: 'PlayfairDisplay-Bold',
     marginBottom: 30,
@@ -152,18 +148,18 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
   },
   numberText: {
-    color: 'white',
+    color: Colours.white,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
@@ -171,27 +167,28 @@ const styles = StyleSheet.create({
   instructionText: {
     flex: 1,
     fontSize: 16,
-    color: '#2D2D2D',
+    color: Colours.black,
     lineHeight: 24,
     fontFamily: 'Inter-Regular',
   },
   churchFooter: {
+    color: Colours.surfaceColour,
     marginTop: 24,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#FFDAD6',
+    borderTopColor: Colours.surfaceColour,
     alignItems: 'center',
   },
   footerText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontFamily: 'PlayfairDisplay-Bold',
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colours.black,
     fontFamily: 'Inter-Regular',
     fontStyle: 'italic',
   },
