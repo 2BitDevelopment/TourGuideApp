@@ -23,10 +23,10 @@ const FirstThursdays = () => {
           <Text style={styles.heading}>First Thursdays</Text>
 
           <View style={styles.cardLarge}>
-            <Text style={styles.cardTitle}>What's happening?</Text>
+            <Text style={styles.cardTitle}>What&apos;s happening?</Text>
             <View style={styles.bullets}>
               <Text style={styles.bullet}>• Open from 5pm-8pm</Text>
-              <Text style={styles.bullet}>• St George's Marimba Team Performances</Text>
+              <Text style={styles.bullet}>• St George&apos;s Marimba Team Performances</Text>
               <Text style={styles.bullet}>
                 • Explore the history alongside other art expeditions in Cape Town
               </Text>
@@ -45,8 +45,8 @@ const FirstThursdays = () => {
         </View>
 
         <View style={styles.churchFooter}>
-          <Text style={styles.footerText}>St. George's Cathedral</Text>
-          <Text style={styles.footerSubtext}>The People's Cathedral</Text>
+          <Text style={styles.footerText}>St. George&apos;s Cathedral</Text>
+          <Text style={styles.footerSubtext}>The People&apos;s Cathedral</Text>
         </View>
       </ScrollView>
     </View>

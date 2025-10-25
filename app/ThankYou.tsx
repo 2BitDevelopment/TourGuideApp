@@ -8,14 +8,14 @@ const ThankYou = () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.mainCard}>
-        <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+        <Text style={styles.brand}>St. George&apos;s{"\n"}Cathedral</Text>
         <Text style={styles.title}>Thank you!</Text>
         
         <Text style={styles.subtitle}>
           We appreciate your time for visiting us.
         </Text>
         <Text style={styles.subtitle}>
-          Make sure to read about our First Thursday Events and don't think twice to contact us for any queries.
+          Make sure to read about our First Thursday Events and don&apos;t think twice to contact us for any queries.
         </Text>
 
         <View style={styles.contactCard}>

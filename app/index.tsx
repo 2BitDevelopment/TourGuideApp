@@ -46,12 +46,12 @@ const CathedralHomePage = () => {
         <View style={styles.content}>
         <CathedralIcon />
 
-        <Text style={styles.title}>St. George’s Cathedral</Text>
+        <Text style={styles.title}>St. George&apos;s Cathedral</Text>
 
         <Text style={styles.subtitle}>
           Known as the Peoples Cathedral{'\n'}
           for its role in the resistance{'\n'}
-          against apartheid, St. George’s{'\n'}
+          against apartheid, St. George&apos;s{'\n'}
           Cathedral is the oldest cathedral{'\n'}
           in Southern Africa.
         </Text>

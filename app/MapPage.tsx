@@ -326,7 +326,7 @@ const MapPage = () => {
               <Text style={styles.backButtonText}>{'‹ Home'}</Text>
             </Link>
           </TouchableOpacity>
-        <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+        <Text style={styles.brand}>St. George&apos;s{"\n"}Cathedral</Text>
           <TouchableOpacity style={styles.helpButton}>
             <Link href={'/help' as any} style={styles.helpButtonLink}>
               <Text style={styles.helpButtonText}>?</Text>
@@ -523,8 +523,8 @@ const MapPage = () => {
             )}
             
             <View style={styles.churchFooter}>
-              <Text style={styles.footerText}>St. George's Cathedral</Text>
-              <Text style={styles.footerSubtext}>The People's Cathedral</Text>
+              <Text style={styles.footerText}>St. George&apos;s Cathedral</Text>
+              <Text style={styles.footerSubtext}>The People&apos;s Cathedral</Text>
             </View>
           </ScrollView>
 
@@ -539,7 +539,7 @@ const MapPage = () => {
                 Analytics.trackPOIView(prev.originalId || prev.id, prev.title);
               }}
             >
-              <Text style={[styles.pillText, styles.pillGhostText]}>‹ Previous</Text>
+              <Text style={[styles.pillText, styles.pillGhostText]}>&lt; Previous</Text>
             </TouchableOpacity>
 
             <View style={styles.audioBackdrop}>
@@ -574,7 +574,7 @@ const MapPage = () => {
                 Analytics.trackPOIView(next.originalId || next.id, next.title);
               }}
             >
-              <Text style={[styles.pillText, styles.pillGhostText]}>Next ›</Text>
+              <Text style={[styles.pillText, styles.pillGhostText]}>Next &gt;</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

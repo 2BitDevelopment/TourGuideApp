@@ -11,7 +11,7 @@ const HelpPage = () => {
         {/* Back Button */}
         <TouchableOpacity style={styles.backButton}>
           <Link href="/MapPage" style={styles.backButtonLink}>
-            <Text style={styles.backButtonText}>‹ Back</Text>
+            <Text style={styles.backButtonText}>&lt; Back</Text>
           </Link>
         </TouchableOpacity>
 
@@ -73,8 +73,8 @@ const HelpPage = () => {
 
         {/* Church Footer */}
         <View style={styles.churchFooter}>
-          <Text style={styles.footerText}>St. George's Cathedral</Text>
-          <Text style={styles.footerSubtext}>The People's Cathedral</Text>
+          <Text style={styles.footerText}>St. George&apos;s Cathedral</Text>
+          <Text style={styles.footerSubtext}>The People&apos;s Cathedral</Text>
         </View>
         </View>
       </ScrollView>

@@ -36,6 +36,17 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+
+# reports for security tests
+reports/
+*.report.json
+*.report.html
+npm-audit*.json
+snyk-report*.json
+snyk-report*.html
+eslint-security-report*.json
+eslint-report*.json
+
 app-example
 .env
 TourGuideApp.code-workspace
