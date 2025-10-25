@@ -204,22 +204,44 @@ const MapPage = () => {
   };
 
 
-  // Returns fixed coordinates for poi's and converts to % to position it x% from side and y% from top
+  // Returns percentage coordinates for poi's (0-1 range, scales with map size)
   const getPOIMapCoordinates = (poiId: number) => {
-  
     const poiCoordinates: Record<number, { x: number, y: number }> = {
-      1: { x: 0.3, y: 0.4 },    
-      2: { x: 0.7, y: 0.6 },     
-      3: { x: 0.5, y: 0.8 }, 
-      4: { x: 0.2, y: 0.7 },     
+      1: { x: 0.15, y: 0.25 },   // Entrance area
+      2: { x: 0.35, y: 0.20 },   // Nave left side
+      3: { x: 0.55, y: 0.15 },   // Nave center
+      4: { x: 0.75, y: 0.25 },   // Nave right side
+      5: { x: 0.85, y: 0.40 },   // Side chapel
+      6: { x: 0.80, y: 0.60 },   // Altar area
+      7: { x: 0.65, y: 0.70 },   // Choir area
+      8: { x: 0.45, y: 0.75 },   // Center back
+      9: { x: 0.25, y: 0.70 },   // Left side back
+      10: { x: 0.10, y: 0.55 },  // Left side chapel
+      11: { x: 0.20, y: 0.40 },  // Left nave
+      12: { x: 0.40, y: 0.35 }, // Left center
+      13: { x: 0.60, y: 0.45 }, // Center area
+      14: { x: 0.70, y: 0.30 }, // Right center
+      15: { x: 0.50, y: 0.60 }, // Center altar
+      16: { x: 0.30, y: 0.55 }, // Left altar area
+      17: { x: 0.90, y: 0.80 }, // Far right corner
+      18: { x: 0.05, y: 0.30 }, // Far left entrance
+      19: { x: 0.95, y: 0.35 }, // Far right side
+      20: { x: 0.12, y: 0.65 }, // Left side middle
+      21: { x: 0.88, y: 0.75 }, // Right side back
+      22: { x: 0.18, y: 0.15 }, // Left front
+      23: { x: 0.82, y: 0.20 }, // Right front
+      24: { x: 0.48, y: 0.25 }, // Center front
+      25: { x: 0.58, y: 0.80 }, // Center back
+      26: { x: 0.38, y: 0.50 }, // Left center
+      27: { x: 0.68, y: 0.50 }, // Right center
     };
     
-    
     const coords = poiCoordinates[poiId] || { x: 0.5, y: 0.5 };
-    
-   
     return coords;
   };
+
+
+  
 
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
@@ -378,7 +400,7 @@ const MapPage = () => {
               style={[styles.pin, {
                 left: `${m.x * 100}%`,
                 top: `${m.y * 100}%`,
-                backgroundColor: '#991b1b'
+                backgroundColor: '#8F000D'
               }]}
               onPress={() => {
                 // Update activity and track POI click analytics
@@ -460,7 +482,7 @@ const MapPage = () => {
         <Animated.View
           style={[
             styles.sheet,
-            { top: headerHeight || 60 },
+            { top: 0 },
             { transform: [{ translateY: sheetTranslateY }] }
           ]}
         >
@@ -480,7 +502,7 @@ const MapPage = () => {
               <Text style={styles.sheetBackText}>‹ Back</Text>
             </TouchableOpacity>
             <View style={styles.sheetTopHandle} />
-            <View style={{ width: 48 }} />
+            <View style={{ width: 80 }} />
           </View>
           <ScrollView 
             style={{ flex: 1 }} 
@@ -605,15 +627,47 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  backButton: {
-    minWidth: 56,
-    minHeight: 34,
+  // Standard navigation button style
+  standardNavButton: {
+    minWidth: 80,
+    minHeight: 40,
     justifyContent: 'center',
-    paddingHorizontal: 10,
-    borderRadius: 18,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#8F000D',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  standardNavButtonText: {
+    color: '#8F000D',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+  },
+  backButton: {
+    minWidth: 80,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#8F000D',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButtonLink: {
     flexDirection: 'row',
@@ -621,7 +675,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: '#8F000D',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
@@ -657,10 +711,11 @@ const styles = StyleSheet.create({
     color: '#8F000D', 
     fontSize: 20, 
     fontWeight: '800', 
-    textAlign: 'center',
+    textAlign: 'left',
     fontFamily: 'PlayfairDisplay-Bold',
     letterSpacing: 0.5,
     flex: 1,
+    paddingLeft: 40,
   },
   mapArea: { 
     flex: 1, 
@@ -711,7 +766,7 @@ const styles = StyleSheet.create({
     left: 0, 
     right: 0, 
     bottom: 0, 
-    top: 60, 
+    top: 0, 
     backgroundColor: 'white', 
     borderTopLeftRadius: 24, 
     borderTopRightRadius: 24, 
@@ -741,11 +796,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sheetTopHandle: {
-    width: 50,
-    height: 5,
-    borderRadius: 3,
+    width: 80,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#8F000D',
-    opacity: 0.6,
+    marginTop: 6,
+    marginBottom: 8,
   },
   sheetHeaderRow: { 
     flexDirection: 'row', 
@@ -835,29 +891,45 @@ const styles = StyleSheet.create({
   },
   sheetBackButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#OOOOOO',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 8,
+    minWidth: 80,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#8F000D',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 8,
   },
   sheetBackText: {
     color: '#8F000D',
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter-Bold',
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
   },
   navPill: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#FFDAD6',
+    borderColor: '#8F000D',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     minWidth: 96,
+    minHeight: 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   audioBackdrop: {
     backgroundColor: '#FFDAD6',
@@ -918,6 +990,7 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
+    textAlign: 'center',
   },
   pillGhost: { 
     backgroundColor: '#FFF8F7',
@@ -1012,10 +1085,15 @@ const styles = StyleSheet.create({
     borderColor: '#8F000D',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   navButtonText: {
     color: '#8F000D',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
   },
