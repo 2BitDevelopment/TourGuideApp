@@ -318,7 +318,7 @@ async function generatePdfReport(
         long: "#87CEEB" // 20+
       };
 
-      const slices: Array<{ value: number; key: "short" | "medium" | "long"; color: string }> = [
+      const slices: { value: number; key: "short" | "medium" | "long"; color: string }[] = [
         { value: durationStats.long, key: "long", color: colors.long },
         { value: durationStats.medium, key: "medium", color: colors.medium },
         { value: durationStats.short, key: "short", color: colors.short }
