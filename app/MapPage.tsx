@@ -1,8 +1,10 @@
 import { Asset } from 'expo-asset';
 import { Link } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
+import { ImageModal } from '../components/ImageModal';
+import { OrientationLock } from '../components/OrientationLock';
 import { POIImage } from '../components/POIImage';
 import { useImageLoading } from '../hooks/useImageLoading';
 import { useSessionTracking } from '../hooks/useSessionTracking';
@@ -45,6 +47,14 @@ const MapPage = () => {
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
+  
+  // Image modal state
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImageUri, setSelectedImageUri] = useState<string>('');
+  const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
+  
+
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   
   // Session tracking hook - returns updateActivity function
   const updateActivity = useSessionTracking('MapPage');
@@ -305,6 +315,20 @@ const MapPage = () => {
     }
   }, [dbPOIs, preloadPOIImages]);
 
+
+  useEffect(() => {
+    const checkDataLoaded = () => {
+      if (dbPOIs.length > 0 && !isLoadingImages && !loadingPOIs) {
+        const hasImages = dbPOIs.some(poi => imageUrls.has(poi.imageID));
+        if (hasImages || dbPOIs.length > 0) {
+          setIsDataLoaded(true);
+        }
+      }
+    };
+
+    checkDataLoaded();
+  }, [dbPOIs, isLoadingImages, loadingPOIs, imageUrls]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -340,8 +364,25 @@ const MapPage = () => {
 
 
 
+  const LoadingScreen = () => (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingTitle}>St. George's Cathedral</Text>
+      <Text style={styles.loadingSubtitle}>Loading your virtual tour...</Text>
+      <ActivityIndicator 
+        size="large" 
+        color="#8F000D" 
+        style={styles.loadingSpinner}
+      />
+      <Text style={styles.loadingText}>Preparing points of interest</Text>
+    </View>
+  );
+  if (!isDataLoaded) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <View style={styles.container}>
+    <OrientationLock>
+      <View style={styles.container}>
       <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
           <TouchableOpacity style={styles.backButton} onPress={() => {}}>
             <Link href="/" style={styles.backButtonLink}>
@@ -469,7 +510,39 @@ const MapPage = () => {
         
         {selectedMarker && (
           <View style={styles.bannerFooter}>
-            <View style={styles.swipeUpButton}>
+            <View 
+              style={styles.swipeUpButton}
+              {...PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: (_, gestureState) => {
+                  return Math.abs(gestureState.dy) > 5;
+                },
+                onPanResponderGrant: () => {
+                  updateActivity();
+                },
+                onPanResponderMove: (_, gestureState) => {
+                  // If swiping up (negative dy), move the sheet
+                  if (gestureState.dy < -20) {
+                    setIsSheetVisible(true);
+                    Animated.spring(sheetTranslateY, {
+                      toValue: 0,
+                      useNativeDriver: true,
+                    }).start();
+                    
+                    if (selectedMarker) {
+                      Analytics.trackPOIInteraction(
+                        selectedMarker.originalId || selectedMarker.id,
+                        selectedMarker.title,
+                        'swipe_up_gesture'
+                      );
+                    }
+                  }
+                },
+                onPanResponderRelease: () => {
+                  // Handle tap if no significant movement
+                },
+              }).panHandlers}
+            >
               <Text style={styles.swipeUpIcon}>^</Text>
               <Text style={styles.swipeUpText}>Swipe up for more information</Text>
             </View>
@@ -523,13 +596,39 @@ const MapPage = () => {
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
             </View>
             
-            <POIImage 
-              imageID={selectedMarker.imageID} 
-              style={styles.sheetImage} 
-              fallbackSource={fallbackImg}
-              resizeMode="cover"
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedMarker.imageID) {
+                  const imageUrl = imageUrls.get(selectedMarker.imageID);
+                  if (imageUrl) {
+                    setSelectedImageUri(imageUrl);
+                    setSelectedImageTitle(selectedMarker.title);
+                    setImageModalVisible(true);
+                    
+                    // Track analytics
+                    Analytics.trackPOIInteraction(
+                      selectedMarker.originalId || selectedMarker.id,
+                      selectedMarker.title,
+                      'image_inspected'
+                    );
+                  }
+                }
+              }}
+              style={styles.imageContainer}
+            >
+              <POIImage 
+                imageID={selectedMarker.imageID} 
+                style={styles.sheetImage} 
+                fallbackSource={fallbackImg}
+                resizeMode="cover"
                 onError={(error) => console.error('POI Image Error:', error)}
               />
+              
+              {/* Add inspect overlay */}
+              <View style={styles.inspectOverlay}>
+                <Text style={styles.inspectText}>Tap to inspect</Text>
+              </View>
+            </TouchableOpacity>
             
             <View style={styles.contentSection}>
               <Text style={styles.sheetBody}>
@@ -601,7 +700,16 @@ const MapPage = () => {
           </View>
         </Animated.View>
       )}
+      
+      {/* Image Inspection Modal */}
+      <ImageModal
+        visible={imageModalVisible}
+        imageUri={selectedImageUri}
+        title={selectedImageTitle}
+        onClose={() => setImageModalVisible(false)}
+      />
     </View>
+    </OrientationLock>
   );
 };
 
@@ -771,6 +879,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24, 
     borderTopRightRadius: 24, 
     padding: 20, 
+    paddingBottom: 0, // Remove bottom padding to eliminate gap
     shadowColor: '#8F000D', 
     shadowOpacity: 0.15, 
     shadowRadius: 12, 
@@ -779,6 +888,15 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     // Contain scroll to avoid parent/body overscroll, web only prop supported by rn-web
     overscrollBehavior: 'contain',
+  },
+  sheetBackgroundOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'white',
+    zIndex: 999, 
   },
   sheetHandle: { 
     alignSelf: 'center', 
@@ -837,24 +955,74 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   imageContainer: {
-    shadowColor: '#8F000D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    position: 'relative',
+    marginBottom: 20,
+  },
+  inspectOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: '#000000',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  inspectText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2D2D2D',
+    fontFamily: 'PlayfairDisplay-Bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  loadingSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6B7280',
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    borderWidth: 3,
+    borderColor: '#E5E7EB',
+    borderTopColor: '#8F000D',
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#8F000D',
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
   },
   contentSection: {
     marginBottom: 20,
   },
   sheetBody: { 
-    fontSize: 14, 
+    fontSize: 16, 
     color: '#374151', 
     lineHeight: 24, 
     marginBottom: 12,
     fontFamily: 'Inter-Regular',
   },
   sectionTitle: { 
-    fontSize: 16, 
+    fontSize: 18, 
     fontWeight: '700', 
     color: '#8F000D', 
     marginBottom: 8,
@@ -918,7 +1086,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#8F000D',
-    paddingVertical: 10,
+    paddingVertical: 0,
     paddingHorizontal: 16,
     borderRadius: 20,
     minWidth: 96,
@@ -939,7 +1107,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 0,
     alignSelf: 'center',
     shadowColor: '#8F000D',
     shadowOffset: { width: 0, height: 2 },
@@ -1054,6 +1222,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    paddingHorizontal: 20,
   },
   bannerIndex: {
     width: 32,
@@ -1099,7 +1268,7 @@ const styles = StyleSheet.create({
   },
   bannerFooter: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 1,
     alignItems: 'center',
   },
   swipeUpButton: {

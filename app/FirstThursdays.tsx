@@ -157,14 +157,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#FFDAD6',
     alignItems: 'center',
-    backgroundColor: surfaceColor,
+    backgroundColor: '#FFFFFF',
   },
   footerText: {
     fontSize: 16,
     fontWeight: '700',
     color: primaryColor,
     fontFamily: 'PlayfairDisplay-Bold',
-    marginBottom: 4,
+    marginBottom: 20,
   },
   footerSubtext: {
     fontSize: 14,

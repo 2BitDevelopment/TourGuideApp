@@ -26,7 +26,7 @@ export const POIImage: React.FC<POIImageProps> = ({
   fallbackSource,
   showLoadingIndicator = true,
   showRetryButton = true,
-  loadingIndicatorColor = '#b61f24',
+  loadingIndicatorColor = '#8F000D',
   loadingIndicatorSize = 'small',
   onImageLoad,
   onError,
@@ -46,7 +46,7 @@ export const POIImage: React.FC<POIImageProps> = ({
     }
   }, [error, onError]);
 
-  const defaultFallback = require('../assets/images/react-logo.png');
+  const defaultFallback = require('../assets/images/ST_GEORGES_CATHEDRAL_LOGO.png');
   const imageSource = imageUrl ? { uri: imageUrl } : (fallbackSource || defaultFallback);
 
   if (isLoading && showLoadingIndicator) {
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   retryButton: {
-    backgroundColor: '#b61f24',
+    backgroundColor: '#8F000D',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,

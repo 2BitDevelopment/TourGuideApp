@@ -3,7 +3,6 @@
 
 import { primaryColor, white } from '@/constants/Colors';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import React from 'react';
 import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -23,7 +22,6 @@ const CathedralIcon = () => (
 
 const CathedralHomePage = () => {
 
-  const navigation = useNavigation<any>();
   const handleVirtualTour = () => {
     // Handle virtual tour navigation
     // navigation.navigate('CustomMap');
