@@ -338,8 +338,8 @@ const MapPage = () => {
     synth.cancel();
 
     const utter = new SpeechSynthesisUtterance(textToSpeak);
-    utter.rate = 0.9;
-    utter.pitch = 1.05;
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
     utter.volume = 1.0;
     utter.lang = 'en-GB';
 
