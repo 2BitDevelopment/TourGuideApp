@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
     minHeight: 40,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingEnd: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

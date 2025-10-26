@@ -426,7 +426,7 @@ const MapPage = () => {
               style={[styles.pin, {
                 left: `${m.x * 100}%`,
                 top: `${m.y * 100}%`,
-                backgroundColor: '#8F000D'
+                backgroundColor: Colours.primaryColour
               }]}
               onPress={() => {
                 // Update activity and track POI click analytics
@@ -589,7 +589,7 @@ const MapPage = () => {
 
           <View style={styles.sheetFooter}>
             <TouchableOpacity
-              style={styles.navPill}
+              style={styles.navPillPrev}
               onPress={() => {
                 updateActivity();
                 synthRef.current.cancel();
@@ -633,7 +633,7 @@ const MapPage = () => {
             </View>
 
             <TouchableOpacity
-              style={styles.navPill}
+              style={styles.navPillNext}
               onPress={() => {
                 updateActivity();
                 synthRef.current.cancel();
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingEnd: 8,
     paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: Colours.white,
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingEnd: 8,
     paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: Colours.white,
@@ -924,12 +924,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
   },
-  navPill: {
+  navPillPrev: {
     backgroundColor: Colours.white,
     borderWidth: 1,
     borderColor: Colours.primaryColour,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingEnd: 8,
+    borderRadius: 20,
+    minWidth: 96,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colours.primaryColour,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  navPillNext: {
+    backgroundColor: Colours.white,
+    borderWidth: 1,
+    borderColor: Colours.primaryColour,
+    paddingVertical: 10,
+    paddingStart: 8,
     borderRadius: 20,
     minWidth: 96,
     minHeight: 40,

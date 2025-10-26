@@ -13,7 +13,7 @@ const HelpPage = () => {
           
         <TouchableOpacity style={styles.backButton}>
           <Link href="/MapPage" style={styles.backButtonLink}>
-            <MaterialIcons name="arrow-back" size={12} color={Colours.primaryColour} style={{ marginRight: 4, textAlignVertical: 'center' }} />
+            <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
             <Text style={styles.backButtonText}>Back</Text>
           </Link>
         </TouchableOpacity>
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingEnd: 8,
     paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: Colours.white,
