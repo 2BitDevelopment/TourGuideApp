@@ -1,26 +1,19 @@
+import { Colours } from '@/constants/Colours';
+import { useImageLoading } from '@/hooks/useImageLoading';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
 import { Link } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
+import { CookieConsent } from '../components/CookieConsent';
+import { ImageModal } from '../components/ImageModal';
+import { OrientationLock } from '../components/OrientationLock';
 import { POIImage } from '../components/POIImage';
-import { useImageLoading } from '../hooks/useImageLoading';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
 import { Analytics } from '../util/Analytics';
 
-type Marker = {
-  id: number;
-  x: number;
-  y: number;
-  title: string;
-  image?: any;
-  imageID?: string;
-  blurb?: string;
-  history?: string;
-  isPOI?: boolean;
-  poiData?: POI;
-};
 
 const fallbackImg = require('../assets/images/react-logo.png');
 const floorplanAsset = Asset.fromModule(require('../assets/images/cathedral-floor.svg'));
@@ -31,6 +24,11 @@ const MapPage = () => {
   const [sheetId, setSheetId] = useState<number | null>(1);
   const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
   const [isSheetVisible, setIsSheetVisible] = useState(false);
+
+  const [speaking, setSpeaking] = useState(false);
+  const synthRef = useRef(window.speechSynthesis);
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   const pan = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
   const lastPan = useRef({ x: 0, y: 0 });
@@ -49,6 +47,17 @@ const MapPage = () => {
   // Track viewed POIs
   const [viewedPOIs, setViewedPOIs] = useState<Set<number>>(new Set());
   
+  // Image modal state
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImageUri, setSelectedImageUri] = useState<string>('');
+  const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
+  
+  // Cookie consent state
+  const [showCookieConsent, setShowCookieConsent] = useState(true);
+  
+
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  
   // Session tracking hook - returns updateActivity function
   const updateActivity = useSessionTracking('MapPage');
 
@@ -57,7 +66,7 @@ const MapPage = () => {
     setMapSize({ width, height });
   };
 
-  // Handles map pan and zoom gestures, single finger pan and two-finger pinch for zoom
+  // for map zoom and pan
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
       return evt.nativeEvent.touches.length <= 2;
@@ -69,9 +78,8 @@ const MapPage = () => {
       return Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10 || evt.nativeEvent.touches.length === 2;
     },
     onPanResponderGrant: () => {
-      // Track user activity when they start interacting with the map
       updateActivity();
-      
+
       pan.setOffset({
         x: lastPan.current.x,
         y: lastPan.current.y,
@@ -82,27 +90,24 @@ const MapPage = () => {
       if (evt.nativeEvent.touches.length === 2) {
         const touch1 = evt.nativeEvent.touches[0];
         const touch2 = evt.nativeEvent.touches[1];
-        
+
         const distance = Math.sqrt(
-          Math.pow(touch2.pageX - touch1.pageX, 2) + 
+          Math.pow(touch2.pageX - touch1.pageX, 2) +
           Math.pow(touch2.pageY - touch1.pageY, 2)
         );
-        
-        // Initialize distance and scale on first pinch
+
         if (initialDistance.current === 0) {
           initialDistance.current = distance;
           initialScale.current = lastScale.current;
         }
-        
-        // Calculate scale based on distance change
+
         const scaleRatio = distance / initialDistance.current;
         const newScale = Math.max(0.5, Math.min(4, initialScale.current * scaleRatio));
         scale.setValue(newScale);
       } else {
-        // Reset pinch tracking when not pinching
         initialDistance.current = 0;
         initialScale.current = 1;
-        
+
         Animated.event([null, { dx: pan.x, dy: pan.y }], {
           useNativeDriver: false,
         })(evt, gestureState);
@@ -112,26 +117,22 @@ const MapPage = () => {
       pan.flattenOffset();
       pan.removeAllListeners();
       scale.removeAllListeners();
-      
-      // Update stored values
+
       pan.addListener((value) => {
         lastPan.current = value;
       });
-      
+
       scale.addListener((value) => {
         lastScale.current = value.value;
       });
 
-      // Reset pinch tracking
       initialDistance.current = 0;
       initialScale.current = 1;
     },
   });
 
-  // Handles the bottom banner/sheet dragging - swipe up to open, swipe down to collapse
   const handlePanResponder = PanResponder.create({
     onStartShouldSetPanResponderCapture: (evt, gestureState) => {
-      // When sheet is visible, aggressively capture vertical gestures to avoid browser pull to refresh
       return isSheetVisible;
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -139,27 +140,24 @@ const MapPage = () => {
     },
     onPanResponderMove: (evt, gestureState) => {
       if (isSheetVisible) {
-       
-        // Only allow dragging the sheet if its internal scroll is at the very top
+
         if (gestureState.dy > 0 && sheetScrollY.current <= 0) {
-          // Prevent browser default scrolling/pull-to-refresh on web
-          // @ts-ignore
+
           if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
           sheetTranslateY.setValue(gestureState.dy);
         }
       } else {
         if (gestureState.dy < 0 && selectedMarker) {
           const dragUp = Math.abs(gestureState.dy);
-          const maxDrag = screenHeight * 0.12; // reach open state with a shorter swipe
+          const maxDrag = screenHeight * 0.12;
           const progress = Math.min(dragUp / maxDrag, 1);
-          // Open to ~60% of screen height to leave a large gap at top
           sheetTranslateY.setValue(screenHeight - (screenHeight * 0.6 * progress));
         }
       }
     },
     onPanResponderRelease: (evt, gestureState) => {
       if (isSheetVisible) {
-        const threshold = screenHeight * 0.1; // easier to close
+        const threshold = screenHeight * 0.1;
         if (gestureState.dy > threshold || gestureState.vy > 0.15) {
           hideSheet();
         } else {
@@ -171,7 +169,7 @@ const MapPage = () => {
           }).start();
         }
       } else {
-        if (gestureState.dy < -10 && selectedMarker) { // shorter swipe to open
+        if (gestureState.dy < -10 && selectedMarker) {
           showSheet();
         } else {
           sheetTranslateY.setValue(screenHeight);
@@ -180,9 +178,8 @@ const MapPage = () => {
     },
   });
 
-  // Sheet animation 
   const showSheet = () => {
-    // Track POI view when sheet opens
+
     if (selectedMarker) {
       updateActivity();
       Analytics.trackPOIView(selectedMarker.originalId || selectedMarker.id, selectedMarker.title);
@@ -190,7 +187,7 @@ const MapPage = () => {
       // Mark POI as viewed
       setViewedPOIs(prev => new Set([...prev, selectedMarker.id]));
     }
-    
+
     setIsSheetVisible(true);
     Animated.timing(sheetTranslateY, {
       toValue: 0,
@@ -207,61 +204,42 @@ const MapPage = () => {
     }).start(() => {
       setIsSheetVisible(false);
     });
+    synthRef.current.cancel();
+    setSpeaking(false);
   };
 
 
-  // Returns percentage coordinates for poi's (0-1 range, scales with map size)
-  const getPOIMapCoordinates = (poiId: number) => {
-    const poiCoordinates: Record<number, { x: number, y: number }> = {
-      1: { x: 0.15, y: 0.25 },   // Entrance area
-      2: { x: 0.35, y: 0.20 },   // Nave left side
-      3: { x: 0.55, y: 0.15 },   // Nave center
-      4: { x: 0.75, y: 0.25 },   // Nave right side
-      5: { x: 0.85, y: 0.40 },   // Side chapel
-      6: { x: 0.80, y: 0.60 },   // Altar area
-      7: { x: 0.65, y: 0.70 },   // Choir area
-      8: { x: 0.45, y: 0.75 },   // Center back
-      9: { x: 0.25, y: 0.70 },   // Left side back
-      10: { x: 0.10, y: 0.55 },  // Left side chapel
-      11: { x: 0.20, y: 0.40 },  // Left nave
-      12: { x: 0.40, y: 0.35 }, // Left center
-      13: { x: 0.60, y: 0.45 }, // Center area
-      14: { x: 0.70, y: 0.30 }, // Right center
-      15: { x: 0.50, y: 0.60 }, // Center altar
-      16: { x: 0.30, y: 0.55 }, // Left altar area
-      17: { x: 0.90, y: 0.80 }, // Far right corner
-      18: { x: 0.05, y: 0.30 }, // Far left entrance
-      19: { x: 0.95, y: 0.35 }, // Far right side
-      20: { x: 0.12, y: 0.65 }, // Left side middle
-      21: { x: 0.88, y: 0.75 }, // Right side back
-      22: { x: 0.18, y: 0.15 }, // Left front
-      23: { x: 0.82, y: 0.20 }, // Right front
-      24: { x: 0.48, y: 0.25 }, // Center front
-      25: { x: 0.58, y: 0.80 }, // Center back
-      26: { x: 0.38, y: 0.50 }, // Left center
-      27: { x: 0.68, y: 0.50 }, // Right center
-    };
+  const getPOIMapCoordinates = (poi: POI) => {
+    // Use coordinates directly from Firebase
+    let x = poi.location.latitude;
+    let y = poi.location.longitude;
     
-    const coords = poiCoordinates[poiId] || { x: 0.5, y: 0.5 };
-    return coords;
+    // Convert to numbers if they're strings
+    if (typeof x === 'string') x = parseFloat(x);
+    if (typeof y === 'string') y = parseFloat(y);
+    
+    // Ensure coordinates are valid numbers
+    if (isNaN(x) || isNaN(y)) {
+      console.warn(`Invalid coordinates for POI ${poi.id}: x=${poi.location.latitude}, y=${poi.location.longitude}`);
+      return { x: 0.5, y: 0.5 }; // Fallback to center
+    }
+    
+    return { x, y };
   };
 
-
-  
 
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
-    
+
     setLoadingPOIs(true);
     try {
-      const pois = await DatabaseApi.getAllPOIsWithImages();
+      const pois = await DatabaseApi.getAllPOIs();
       
       setDbPOIs(pois);
-      
     } catch (error) {
       console.error('Failed to load POIs:', error);
       Alert.alert(
-        'Error Loading POIs', 
+        'Error Loading POIs',
         'Failed to load points of interest from the database. Please check your connection and try again.'
       );
     } finally {
@@ -272,14 +250,14 @@ const MapPage = () => {
   // Convert database POIs to map markers
   const databaseMarkers = useMemo(() => {
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
-    
+
     return sortedPOIs.map((poi, index) => {
-      const coords = getPOIMapCoordinates(poi.id); 
+      const coords = getPOIMapCoordinates(poi); // Pass the POI object instead of just ID
       const imageUrl = imageUrls.get(poi.imageID);
-      
+
       return {
-        id: index + 1, 
-        originalId: poi.id, 
+        id: index + 1,
+        originalId: poi.id,
         x: coords.x,
         y: coords.y,
         title: poi.title,
@@ -301,8 +279,6 @@ const MapPage = () => {
 
   useEffect(() => {
     loadPOIsFromDatabase();
-    // Track map page view (page view tracking is handled by useSessionTracking)
-    Analytics.trackMapView();
   }, []);
 
   useEffect(() => {
@@ -310,6 +286,35 @@ const MapPage = () => {
       preloadPOIImages(dbPOIs);
     }
   }, [dbPOIs, preloadPOIImages]);
+
+
+  useEffect(() => {
+    const checkDataLoaded = () => {
+      if (dbPOIs.length > 0 && !isLoadingImages && !loadingPOIs) {
+        const hasImages = dbPOIs.some(poi => imageUrls.has(poi.imageID));
+        if (hasImages || dbPOIs.length > 0) {
+          setIsDataLoaded(true);
+        }
+      }
+    };
+
+    checkDataLoaded();
+  }, [dbPOIs, isLoadingImages, loadingPOIs, imageUrls]);
+
+  // Handle Android back button to close sheet
+  useEffect(() => {
+    const backAction = () => {
+      if (isSheetVisible) {
+        setIsSheetVisible(false);
+        return true; 
+      }
+      return false; 
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, [isSheetVisible]);
 
   useEffect(() => {
     let isMounted = true;
@@ -344,25 +349,86 @@ const MapPage = () => {
     };
   }, []);
 
+  const LoadingScreen = () => (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingTitle}>St. George's Cathedral</Text>
+      <Text style={styles.loadingSubtitle}>Loading your virtual tour...</Text>
+      <ActivityIndicator 
+        size="large" 
+        color={Colours.primaryColour} 
+        style={styles.loadingSpinner}
+      />
+      <Text style={styles.loadingText}>Preparing points of interest</Text>
+    </View>
+  );
+  if (!isDataLoaded) {
+    return <LoadingScreen />;
+  }
 
+  // Text-to-speech functionality for POI items
+  const handleSpeak = () => {
+    if (!selectedMarker) return;
+
+    const synth = synthRef.current;
+    const textToSpeak = `${selectedMarker.title}. ${selectedMarker.blurb ? selectedMarker.blurb : ''
+      }. ${selectedMarker.history ? `Historical Significance: ${selectedMarker.history}` : ''
+      }.`.trim();
+
+    if (speaking) {
+      synth.cancel();
+      setSpeaking(false);
+      return;
+    }
+
+    synth.cancel();
+
+    const utter = new SpeechSynthesisUtterance(textToSpeak);
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
+    utter.volume = 1.0;
+    utter.lang = 'en-GB';
+
+    const voices = synth.getVoices();
+    utter.voice =
+      voices.find(v => v.name.includes('Google UK English Male')) ||
+      voices.find(v => v.name.includes('Google UK English Female')) ||
+      voices.find(v => v.lang === 'en-GB') ||
+      voices[0];
+
+    utter.onstart = () => setSpeaking(true);
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+
+    utterRef.current = utter;
+    synth.speak(utter);
+  };
+
+  // Structure of page
 
   return (
-    <View style={styles.container}>
+    <OrientationLock>
+      <View style={styles.container}>
       <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
-          <TouchableOpacity style={styles.backButton} onPress={() => {}}>
-            <Link href="/" style={styles.backButtonLink}>
-              <Text style={styles.backButtonText}>{'‹ Home'}</Text>
-            </Link>
-          </TouchableOpacity>
+        <TouchableOpacity style={styles.backButton}
+          onPress={() => {
+            synthRef.current.cancel();
+            setSpeaking(false);
+          }}>
+
+          <Link href="/" style={styles.backButtonLink}>
+            <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+            <Text style={styles.backButtonText}>Home</Text>
+          </Link>
+        </TouchableOpacity>
         <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
-          <TouchableOpacity style={styles.helpButton}>
-            <Link href={'/help' as any} style={styles.helpButtonLink}>
-              <Text style={styles.helpButtonText}>?</Text>
-            </Link>
-          </TouchableOpacity>
+        <TouchableOpacity style={styles.helpButton}>
+          <Link href={'/help' as any} style={styles.helpButtonLink}>
+            <Text style={styles.helpButtonText}>?</Text>
+          </Link>
+        </TouchableOpacity>
       </View>
 
-      {/* Map with pan and zoom functionality */}
+      {/* Map */}
       <View
         style={[styles.mapArea, { touchAction: 'none' } as any]}
         onLayout={onMapLayout}
@@ -385,16 +451,16 @@ const MapPage = () => {
           ]}
           {...panResponder.panHandlers}
         >
-          
+
           {floorplanUri ? (
             <SvgUri
               uri={floorplanUri}
               width="100%"
               height="100%"
               preserveAspectRatio="xMidYMid meet"
-            style={styles.floor}
+              style={styles.floor}
               pointerEvents="none"
-          />
+            />
           ) : (
             <View style={[styles.floor, styles.floorFallback]} pointerEvents="none" />
           )}
@@ -406,14 +472,14 @@ const MapPage = () => {
               style={[styles.pin, {
                 left: `${m.x * 100}%`,
                 top: `${m.y * 100}%`,
-                backgroundColor: '#8F000D',
+                backgroundColor: Colours.primaryColour,
                 opacity: viewedPOIs.has(m.id) ? 0.4 : 1.0
               }]}
               onPress={() => {
                 // Update activity and track POI click analytics
                 updateActivity();
                 Analytics.trackPOIClick(m.originalId || m.id, m.title);
-                
+
                 setSheetId(m.id);
                 // Do not auto open the sheet, it opens only on swipe up
               }}
@@ -424,11 +490,10 @@ const MapPage = () => {
         </Animated.View>
       </View>
 
-      {/* Database controls removed */}
 
-      
+
       <View style={styles.bottomBanner}>
-      <View 
+        <View
           style={styles.bannerTopBar}
           {...handlePanResponder.panHandlers}
           hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
@@ -440,51 +505,98 @@ const MapPage = () => {
         <View style={styles.bannerContent}>
           {selectedMarker && (
             <>
-              <TouchableOpacity 
-                style={styles.navButton}
-                onPress={() => {
-                  updateActivity();
-                  const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
-                  const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
-                  setSheetId(prev.id);
-                }}
-              >
-                <Text style={styles.navButtonText}>‹</Text>
-        </TouchableOpacity>
-              
+              {selectedMarker.id >= 2 && selectedMarker.id <= 26 ? (
+                <TouchableOpacity
+                  style={styles.navButton}
+                  onPress={() => {
+                    updateActivity();
+                    synthRef.current.cancel();
+                    setSpeaking(false);
+                    const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                    const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
+                    setSheetId(prev.id);
+                  }}
+                >
+                  <MaterialIcons name="chevron-left" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 44 }} />
+              )}
+
               <View style={styles.bannerCenter}>
                 <View style={styles.bannerIndex}>
                   <Text style={styles.bannerIndexText}>{selectedMarker.id}</Text>
                 </View>
                 <Text style={styles.bannerTitle}>{selectedMarker.title}</Text>
-      </View>
+              </View>
 
-              <TouchableOpacity 
-                style={styles.navButton}
-                onPress={() => {
-                  updateActivity();
-                  const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
-                  const next = allMarkers[(idx + 1) % allMarkers.length];
-                  setSheetId(next.id);
-                }}
-              >
-                <Text style={styles.navButtonText}>›</Text>
-        </TouchableOpacity>
+              {selectedMarker.id === 26 ? (
+                <TouchableOpacity 
+                  style={styles.endTourButton}
+                  onPress={() => {
+                    updateActivity();
+                    // Navigate to Thank You page
+                    window.location.href = '/ThankYou';
+                  }}
+                >
+                  <Text style={styles.endTourButtonText}>End Tour</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.navButton}
+                  onPress={() => {
+                    updateActivity();
+                    const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                    const next = allMarkers[(idx + 1) % allMarkers.length];
+                    setSheetId(next.id);
+                  }}
+                >
+                  <Text style={styles.navButtonText}>›</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
-        
+
         {selectedMarker && (
           <View style={styles.bannerFooter}>
-            <View style={styles.swipeUpButton}>
-              <Text style={styles.swipeUpIcon}>^</Text>
+            <View 
+              style={styles.swipeUpButton}
+              {...PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: (_, gestureState) => {
+                  return Math.abs(gestureState.dy) > 5;
+                },
+                onPanResponderGrant: () => {
+                  updateActivity();
+                },
+                onPanResponderMove: (_, gestureState) => {
+                  // If swiping up (negative dy), move the sheet
+                  if (gestureState.dy < -20) {
+                    setIsSheetVisible(true);
+                    Animated.spring(sheetTranslateY, {
+                      toValue: 0,
+                      useNativeDriver: true,
+                    }).start();
+                    
+                    if (selectedMarker) {
+                      updateActivity();
+                    }
+                  }
+                },
+                onPanResponderRelease: () => {
+                  // Handle tap if no significant movement
+                },
+              }).panHandlers}
+            >
+              <MaterialIcons name="keyboard-double-arrow-up" size={20} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
               <Text style={styles.swipeUpText}>Swipe up for more information</Text>
             </View>
           </View>
         )}
       </View>
 
-      
+
       {isSheetVisible && selectedMarker && (
         <Animated.View
           style={[
@@ -493,7 +605,7 @@ const MapPage = () => {
             { transform: [{ translateY: sheetTranslateY }] }
           ]}
         >
-          <View 
+          <View
             style={styles.sheetTopBar}
             {...handlePanResponder.panHandlers}
             hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
@@ -502,21 +614,28 @@ const MapPage = () => {
               style={styles.sheetBackButton}
               onPress={() => {
                 updateActivity();
+                synthRef.current.cancel();
+                setSpeaking(false);
                 hideSheet();
               }}
               accessibilityRole="button"
             >
-              <Text style={styles.sheetBackText}>‹ Back</Text>
+              <Text style={styles.sheetBackText}>
+                <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                Back
+              </Text>
             </TouchableOpacity>
             <View style={styles.sheetTopHandle} />
             <View style={{ width: 80 }} />
+
           </View>
-          <ScrollView 
-            style={{ flex: 1 }} 
-            contentContainerStyle={{ paddingBottom: 16 }} 
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 16 }}
             showsVerticalScrollIndicator={false}
             scrollEventThrottle={16}
-            onScroll={(e) => { 
+            onScroll={(e) => {
               sheetScrollY.current = e.nativeEvent.contentOffset.y;
               // Track activity on scroll to show user is actively engaged
               updateActivity();
@@ -530,27 +649,49 @@ const MapPage = () => {
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
             </View>
             
-            <POIImage 
-              imageID={selectedMarker.imageID} 
-              style={styles.sheetImage} 
-              fallbackSource={fallbackImg}
-              resizeMode="cover"
-                onError={(error) => console.error('POI Image Error:', error)}
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedMarker.imageID) {
+                  const imageUrl = imageUrls.get(selectedMarker.imageID);
+                  if (imageUrl) {
+                    setSelectedImageUri(imageUrl);
+                    setSelectedImageTitle(selectedMarker.title);
+                    setImageModalVisible(true);
+                    
+                    // Track user activity
+                    updateActivity();
+                  }
+                }
+              }}
+              style={styles.imageContainer}
+            >
+              <POIImage 
+                imageID={selectedMarker.imageID} 
+                style={styles.sheetImage} 
+                fallbackSource={fallbackImg}
+                resizeMode="cover"
+                onError={(error: any) => console.error('POI Image Error:', error)}
               />
+              
+              {/* Add inspect overlay */}
+              <View style={styles.inspectOverlay}>
+                <Text style={styles.inspectText}>Tap to inspect</Text>
+              </View>
+            </TouchableOpacity>
             
             <View style={styles.contentSection}>
               <Text style={styles.sheetBody}>
                 {selectedMarker.blurb || 'Discover the rich history and significance of this sacred space within St. George\'s Cathedral.'}
               </Text>
             </View>
-            
+
             {selectedMarker.history && selectedMarker.history !== selectedMarker.blurb && (
               <View style={styles.contentSection}>
-            <Text style={styles.sectionTitle}>Historical Significance</Text>
-            <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
+                <Text style={styles.sectionTitle}>Historical Significance</Text>
+                <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
               </View>
             )}
-            
+
             <View style={styles.churchFooter}>
               <Text style={styles.footerText}>St. George's Cathedral</Text>
               <Text style={styles.footerSubtext}>The People's Cathedral</Text>
@@ -558,119 +699,132 @@ const MapPage = () => {
           </ScrollView>
 
           <View style={styles.sheetFooter}>
-            <TouchableOpacity
-              style={styles.navPill}
-              onPress={() => {
-                updateActivity();
-                const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
-                const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
-                setSheetId(prev.id);
-                Analytics.trackPOIView(prev.originalId || prev.id, prev.title);
-              }}
-            >
-              <Text style={[styles.pillText, styles.pillGhostText]}>‹ Previous</Text>
-            </TouchableOpacity>
+            {selectedMarker?.id >= 2 && selectedMarker?.id <= 26 ? (
+              <TouchableOpacity
+                style={styles.navPillPrev}
+                onPress={() => {
+                  updateActivity();
+                  synthRef.current.cancel();
+                  setSpeaking(false);
+                  const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
+                  const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
+                  setSheetId(prev.id);
+                }}
+              >
+                <Text style={styles.sheetBackText}>
+                  <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                  Previous
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 96 }} />
+            )}
 
             <View style={styles.audioBackdrop}>
               <View style={styles.audioDock}>
-              <TouchableOpacity
-                style={styles.audioCircle}
-                onPress={() => {
-                  updateActivity();
-                  if (selectedMarker) {
-                    Analytics.trackPOIInteraction(
-                      selectedMarker.originalId || selectedMarker.id,
-                      selectedMarker.title,
-                      'audio_guide_clicked'
-                    );
+                <TouchableOpacity
+                  style={styles.audioCircle}
+                  onPress={() => {
+                    updateActivity();
+                    handleSpeak();
+                  }}
+                  accessibilityRole="button"
+                >
+                  {speaking ?
+                    <MaterialIcons name="pause" size={24} color={Colours.white} />
+                    : <MaterialIcons name="play-arrow" size={24} color={Colours.white} />
                   }
-                }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.audioIcon}>II</Text>
-            </TouchableOpacity>
-              <Text style={styles.audioLabel}>Audio Guide</Text>
+                </TouchableOpacity>
+                <Text style={styles.audioLabel}>Audio Guide</Text>
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.navPill}
-              onPress={() => {
-                updateActivity();
-                const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
-                const next = allMarkers[(idx + 1) % allMarkers.length];
-                setSheetId(next.id);
-                Analytics.trackPOIView(next.originalId || next.id, next.title);
-              }}
-            >
-              <Text style={[styles.pillText, styles.pillGhostText]}>Next ›</Text>
-            </TouchableOpacity>
+            {selectedMarker?.id === 26 ? (
+              <TouchableOpacity
+                style={styles.endTourPill}
+                onPress={() => {
+                  updateActivity();
+                  synthRef.current.cancel();
+                  setSpeaking(false);
+                  // Navigate to Thank You page
+                  window.location.href = '/ThankYou';
+                }}
+              >
+                <Text style={styles.endTourPillText}>End Tour</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.navPillNext}
+                onPress={() => {
+                  updateActivity();
+                  synthRef.current.cancel();
+                  setSpeaking(false);
+                  const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
+                  const next = allMarkers[(idx + 1) % allMarkers.length];
+                  setSheetId(next.id);
+                }}
+              >
+                <Text style={[styles.endTourPillText, styles.pillGhostText]}>
+                  Next
+                  <MaterialIcons name="keyboard-arrow-right" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </Animated.View>
       )}
+      
+      {/* Image Inspection Modal */}
+      <ImageModal
+        visible={imageModalVisible}
+        imageUri={selectedImageUri}
+        title={selectedImageTitle}
+        onClose={() => setImageModalVisible(false)}
+      />
+      
+      {/* Cookie Consent Banner */}
+      {showCookieConsent && <CookieConsent />}
     </View>
+    </OrientationLock>
   );
 };
 
+
+// Styles
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#FFFFFF', 
+  container: {
+    flex: 1,
+    backgroundColor: Colours.white,
     overflow: 'hidden',
   },
-  header: { 
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 20, 
-    paddingBottom: 12, 
+    paddingTop: 20,
+    paddingBottom: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF', 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#FFDAD6',
-    shadowColor: '#8F000D',
+    backgroundColor: Colours.surfaceColour,
+    borderBottomWidth: 1,
+    borderBottomColor: Colours.primaryColour,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  // Standard navigation button style
-  standardNavButton: {
-    minWidth: 80,
-    minHeight: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#8F000D',
-    shadowColor: '#8F000D',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  standardNavButtonText: {
-    color: '#8F000D',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Inter-Medium',
-    textAlign: 'center',
   },
   backButton: {
     minWidth: 80,
     minHeight: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingEnd: 8,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colours.white,
     borderWidth: 1,
-    borderColor: '#8F000D',
-    shadowColor: '#8F000D',
+    borderColor: Colours.primaryColour,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -681,7 +835,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
@@ -691,10 +845,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -706,7 +860,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   helpButtonText: {
-    color: 'white',
+    color: Colours.white,
     fontSize: 20,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
@@ -714,85 +868,93 @@ const styles = StyleSheet.create({
     lineHeight: 44,
     marginHorizontal: 10,
   },
-  brand: { 
-    color: '#8F000D', 
-    fontSize: 20, 
-    fontWeight: '800', 
+  brand: {
+    color: Colours.primaryColour,
+    fontSize: 24,
+    fontWeight: '800',
     textAlign: 'left',
     fontFamily: 'PlayfairDisplay-Bold',
     letterSpacing: 0.5,
     flex: 1,
-    paddingLeft: 40,
+    paddingLeft: 45,
   },
-  mapArea: { 
-    flex: 1, 
-    backgroundColor: '#FFFFFF', 
-    position: 'relative', 
+  mapArea: {
+    flex: 1,
+    backgroundColor: Colours.white,
+    position: 'relative',
     overflow: 'hidden',
-    paddingBottom: 100, 
+    paddingBottom: 100,
     width: '100%',
     height: '100%',
   },
-  mapContent: { 
-    flex: 1, 
-    width: '100%', 
+  mapContent: {
+    flex: 1,
+    width: '100%',
     height: '100%',
   },
-  floor: { 
+  floor: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.9, 
+    opacity: 0.9,
   },
   floorFallback: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: Colours.surfaceColour,
   },
-  
-  pin: { 
-    position: 'absolute', 
-    width: 24, 
-    height: 24, 
-    borderRadius: 12, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
+  pin: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     transform: [{ translateX: -12 }, { translateY: -12 }],
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colours.white,
   },
-  pinText: { 
-    color: 'white', 
-    fontWeight: '700', 
+  pinText: {
+    color: Colours.white,
+    fontWeight: '700',
     fontSize: 13,
     fontFamily: 'Inter-Bold',
   },
-  sheet: { 
-    position: 'absolute', 
-    left: 0, 
-    right: 0, 
-    bottom: 0, 
-    top: 0, 
-    backgroundColor: 'white', 
-    borderTopLeftRadius: 24, 
-    borderTopRightRadius: 24, 
-    padding: 20, 
-    shadowColor: '#8F000D', 
-    shadowOpacity: 0.15, 
-    shadowRadius: 12, 
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    backgroundColor: Colours.surfaceColour,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    paddingBottom: 0,
+    shadowColor: Colours.primaryColour,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: -4 },
     elevation: 8,
     zIndex: 1000,
-    // Contain scroll to avoid parent/body overscroll, web only prop supported by rn-web
     overscrollBehavior: 'contain',
+  },
+  sheetBackgroundOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colours.white,
+    zIndex: 999, 
   },
   sheetHandle: { 
     alignSelf: 'center', 
     width: 50, 
     height: 5, 
     borderRadius: 3, 
-    backgroundColor: '#8F000D', 
+    backgroundColor: Colours.primaryColour, 
     marginBottom: 16,
     opacity: 0.6,
   },
@@ -803,67 +965,113 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sheetTopHandle: {
-    width: 80,
-    height: 8,
+    width: 30,
+    height: 6,
     borderRadius: 4,
-    backgroundColor: '#8F000D',
-    marginTop: 6,
+    backgroundColor: Colours.primaryColour,
+    marginTop: -30,
     marginBottom: 8,
   },
-  sheetHeaderRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 16 
+  sheetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16
   },
-  sheetIndex: { 
-    width: 32, 
-    height: 32, 
-    borderRadius: 16, 
-    backgroundColor: '#8F000D', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
+  sheetIndex: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colours.primaryColour,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
   },
-  sheetTitle: { 
-    fontSize: 22, 
-    fontWeight: '800', 
-    color: '#111827', 
+  sheetTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colours.black,
     marginBottom: 0,
     fontFamily: 'PlayfairDisplay-Bold',
     flex: 1,
   },
-  sheetImage: { 
-    width: '100%', 
-    height: 220, 
-    borderRadius: 16, 
+  sheetImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 16,
     marginBottom: 20,
   },
   imageContainer: {
-    shadowColor: '#8F000D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    position: 'relative',
+    marginBottom: 20,
+  },
+  inspectOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: Colours.black,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  inspectText: {
+    color: Colours.white,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colours.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colours.black,
+    fontFamily: 'PlayfairDisplay-Bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  loadingSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colours.black,
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    marginBottom: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colours.primaryColour,
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
   },
   contentSection: {
     marginBottom: 20,
   },
-  sheetBody: { 
-    fontSize: 14, 
-    color: '#374151', 
-    lineHeight: 24, 
+  sheetBody: {
+    fontSize: 16,
+    color: Colours.black,
+    lineHeight: 24,
     marginBottom: 12,
     fontFamily: 'Inter-Regular',
   },
-  sectionTitle: { 
-    fontSize: 16, 
-    fontWeight: '700', 
-    color: '#8F000D', 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colours.primaryColour,
     marginBottom: 8,
     fontFamily: 'PlayfairDisplay-Bold',
   },
@@ -871,30 +1079,30 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#FFDAD6',
+    borderTopColor: Colours.surfaceVariantColour,
     alignItems: 'center',
   },
   footerText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontFamily: 'PlayfairDisplay-Bold',
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colours.black,
     fontFamily: 'Inter-Regular',
     fontStyle: 'italic',
   },
-  sheetFooter: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
+  sheetFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#FFDAD6',
+    borderTopColor: Colours.surfaceVariantColour,
   },
   sheetBackButton: {
     alignSelf: 'flex-start',
@@ -902,13 +1110,13 @@ const styles = StyleSheet.create({
     minHeight: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingEnd: 8,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colours.white,
     borderWidth: 1,
-    borderColor: '#8F000D',
-    shadowColor: '#8F000D',
+    borderColor: Colours.primaryColour,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -916,39 +1124,56 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sheetBackText: {
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
   },
-  navPill: {
-    backgroundColor: '#FFFFFF',
+  navPillPrev: {
+    backgroundColor: Colours.white,
     borderWidth: 1,
-    borderColor: '#8F000D',
+    borderColor: Colours.primaryColour,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingEnd: 8,
     borderRadius: 20,
     minWidth: 96,
     minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  navPillNext: {
+    backgroundColor: Colours.white,
+    borderWidth: 1,
+    borderColor: Colours.primaryColour,
+    paddingVertical: 10,
+    paddingStart: 8,
+    borderRadius: 20,
+    minWidth: 96,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   audioBackdrop: {
-    backgroundColor: '#FFDAD6',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: Colours.surfaceVariantColour,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 0,
     alignSelf: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -961,62 +1186,80 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
   },
-  audioIcon: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '900',
-  },
   audioLabel: {
     marginTop: 6,
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontFamily: 'Inter-Medium',
     fontSize: 12,
   },
-  pillButton: { 
-    paddingVertical: 12, 
-    paddingHorizontal: 20, 
-    borderRadius: 25,
-    minWidth: 80,
+  navPill: {
+    backgroundColor: Colours.white,
+    borderWidth: 1,
+    borderColor: Colours.primaryColour,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    minWidth: 96,
+    minHeight: 40,
     alignItems: 'center',
-    shadowColor: '#8F000D',
+    justifyContent: 'center',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  pillText: { 
-    fontSize: 14, 
+  endTourPill: {
+    backgroundColor: Colours.primaryColour,
+    borderWidth: 1,
+    borderColor: Colours.primaryColour,
+    paddingVertical: 0,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    minWidth: 96,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colours.primaryColour,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  endTourPillText: {
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
+    color: Colours.white,
   },
   pillGhost: { 
-    backgroundColor: '#FFF8F7',
+    backgroundColor: Colours.surfaceColour,
     borderWidth: 1,
-    borderColor: '#FFDAD6',
+    borderColor: Colours.surfaceVariantColour,
   },
   pillGhostText: { 
-    color: '#8F000D' 
+    color: Colours.primaryColour 
   },
   pillPrimary: { 
-    backgroundColor: '#8F000D',
-    shadowColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
   },
   pillPrimaryText: { 
-    color: 'white',
+    color: Colours.white,
     fontWeight: '700',
   },
   bottomBanner: {
@@ -1024,10 +1267,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#8F000D',
+    backgroundColor: Colours.surfaceColour,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -1036,10 +1279,10 @@ const styles = StyleSheet.create({
   },
   bannerHandle: {
     alignSelf: 'center',
-    width: 80, 
-    height: 8, 
+    width: 30,
+    height: 6,
     borderRadius: 4,
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     marginTop: 6,
     marginBottom: 8,
   },
@@ -1061,18 +1304,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    paddingHorizontal: 20,
   },
   bannerIndex: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   bannerIndexText: {
-    color: 'white',
+    color: Colours.white,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
@@ -1080,73 +1324,72 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2D2D2D',
+    color: Colours.black,
     fontFamily: 'Inter-Bold',
   },
   navButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: Colours.white,
     borderWidth: 1,
-    borderColor: '#8F000D',
+    borderColor: Colours.primaryColour,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   navButtonText: {
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
   },
+  endTourButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 22,
+    backgroundColor: Colours.primaryColour,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colours.primaryColour,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 80,
+  },
+  endTourButtonText: {
+    color: Colours.white,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Bold',
+  },
   bannerFooter: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
     alignItems: 'center',
   },
   swipeUpButton: {
-    backgroundColor: '#FFDAD6',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: Colours.surfaceVariantColour,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingTop: 8,
     paddingHorizontal: 20,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
-  },
-  swipeUpIcon: {
-    color: '#8F000D',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
+    minHeight: 40,
   },
   swipeUpText: {
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Inter-Medium',
-    textAlign: 'center',
-  },
-  bannerDefaultTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#8F000D',
-    fontFamily: 'PlayfairDisplay-Bold',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  bannerDefaultSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6B7280',
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
   },
