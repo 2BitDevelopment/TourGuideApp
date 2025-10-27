@@ -736,6 +736,8 @@ const MapPage = () => {
                 style={styles.endTourPill}
                 onPress={() => {
                   updateActivity();
+                  synthRef.current.cancel();
+                  setSpeaking(false);
                   // Navigate to Thank You page
                   window.location.href = '/ThankYou';
                 }}
@@ -744,15 +746,20 @@ const MapPage = () => {
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={styles.navPill}
+                style={styles.navPillNext}
                 onPress={() => {
                   updateActivity();
+                  synthRef.current.cancel();
+                  setSpeaking(false);
                   const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
                   const next = allMarkers[(idx + 1) % allMarkers.length];
                   setSheetId(next.id);
                 }}
               >
-                <Text style={[styles.endTourPillText, styles.pillGhostText]}>Next ›</Text>
+                <Text style={[styles.endTourPillText, styles.pillGhostText]}>
+                  Next
+                  <MaterialIcons name="keyboard-arrow-right" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                </Text>
               </TouchableOpacity>
             )}
           </View>

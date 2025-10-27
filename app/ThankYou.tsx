@@ -49,7 +49,7 @@ const ThankYou = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: Colours.white,
+    backgroundColor: Colours.surfaceColour,
     paddingTop: 10,
     paddingHorizontal: 10,
     paddingBottom: 10,
