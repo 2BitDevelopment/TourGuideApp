@@ -1,3 +1,4 @@
+import { Colours } from '@/constants/Colours';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
@@ -21,15 +22,15 @@ const ThankYou = () => {
         <View style={styles.contactCard}>
           <Text style={styles.contactHeading}>Contact Us</Text>
           <View style={styles.contactRow}>
-            <MaterialIcons name="call" size={18} color="#111827" style={{ marginRight: 8 }} />
+            <MaterialIcons name="call" size={18} color={Colours.black} style={{ marginRight: 8 }} />
             <Text style={styles.contact}>+27 21 424 7360</Text>
           </View>
           <View style={styles.contactRow}>
-            <MaterialIcons name="mail-outline" size={18} color="#111827" style={{ marginRight: 8 }} />
+            <MaterialIcons name="mail-outline" size={18} color={Colours.black} style={{ marginRight: 8 }} />
             <Text style={styles.contact}>reception@sgcathedral.co.za</Text>
           </View>
           <View style={styles.contactRow}>
-            <MaterialIcons name="location-on" size={18} color="#111827" style={{ marginRight: 8 }} />
+            <MaterialIcons name="location-on" size={18} color={Colours.black} style={{ marginRight: 8 }} />
             <Text style={styles.contact}>5 Wale St, Cape Town, 8001</Text>
           </View>
         </View>
@@ -48,7 +49,7 @@ const ThankYou = () => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colours.surfaceColour,
     paddingTop: 10,
     paddingHorizontal: 10,
     paddingBottom: 10,
@@ -59,18 +60,18 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#9CA3AF',
+    color: Colours.white,
     marginBottom: 20,
     fontFamily: 'Inter-Medium',
   },
   mainCard: {
     minHeight: 400,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colours.white,
     borderRadius: 20,
     padding: 30,
     marginHorizontal: 20,
     marginVertical: 15,
-    shadowColor: '#000',
+    shadowColor: Colours.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brand: { 
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontSize: 28, 
     fontWeight: '800', 
     textAlign: 'center',
@@ -89,14 +90,14 @@ const styles = StyleSheet.create({
   title: { 
     fontSize: 32, 
     fontWeight: '800', 
-    color: '#2D2D2D',
+    color: Colours.black,
     textAlign: 'center',
     marginBottom: 20,
     fontFamily: 'Inter-Bold',
   },
   subtitle: { 
     fontSize: 16, 
-    color: '#374151', 
+    color: Colours.black, 
     textAlign: 'center', 
     marginBottom: 12, 
     lineHeight: 24,
@@ -107,8 +108,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     borderRadius: 16, 
     borderWidth: 2, 
-    borderColor: '#8F000D', 
-    backgroundColor: '#FFFFFF',
+    borderColor: Colours.primaryColour, 
+    backgroundColor: Colours.white,
     padding: 20,
     width: '100%',
     alignItems: 'flex-start',
@@ -122,25 +123,25 @@ const styles = StyleSheet.create({
     fontWeight: '800', 
     marginBottom: 16, 
     fontSize: 18,
-    color: '#2D2D2D',
+    color: Colours.black,
     fontFamily: 'Inter-Bold',
   },
   contact: { 
     fontSize: 16, 
-    color: '#374151', 
+    color: Colours.black, 
     marginBottom: 8,
     fontFamily: 'Inter-Regular',
   },
   backButton: { 
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: Colours.white, 
     paddingVertical: 10, 
     paddingHorizontal: 16, 
     borderRadius: 20, 
     minWidth: 80,
     minHeight: 40,
     borderWidth: 1,
-    borderColor: '#8F000D',
-    shadowColor: '#8F000D',
+    borderColor: Colours.primaryColour,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
   },
   backText: { 
     textAlign: 'center', 
-    color: '#8F000D', 
+    color: Colours.primaryColour, 
     fontSize: 14, 
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
