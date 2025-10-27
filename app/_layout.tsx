@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -13,6 +14,7 @@ export default function RootLayout() {
     'PlayfairDisplay-Regular': require('../assets/fonts/PlayfairDisplay-Regular.ttf'),
     'PlayfairDisplay-Bold': require('../assets/fonts/PlayfairDisplay-Bold.ttf'),
     'PlayfairDisplay-Black': require('../assets/fonts/PlayfairDisplay-Black.ttf'),
+    ...MaterialIcons.font,
   });
 
   if (!loaded) {
