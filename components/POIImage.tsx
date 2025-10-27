@@ -1,3 +1,4 @@
+import { Colours } from '@/constants/Colours';
 import React from 'react';
 import { ActivityIndicator, Image, ImageStyle, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { useSingleImage } from '../hooks/useImageLoading';
@@ -26,7 +27,7 @@ export const POIImage: React.FC<POIImageProps> = ({
   fallbackSource,
   showLoadingIndicator = true,
   showRetryButton = true,
-  loadingIndicatorColor = '#8F000D',
+  loadingIndicatorColor = Colours.primaryColour,
   loadingIndicatorSize = 'small',
   onImageLoad,
   onError,
@@ -115,7 +116,7 @@ export const POIImageThumbnail: React.FC<POIImageProps & { size?: number }> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: Colours.white,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -127,29 +128,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   errorContainer: {
-    backgroundColor: '#fee2e2',
-    borderColor: '#ef4444',
+    backgroundColor: Colours.surfaceVariantColour,
+    borderColor: Colours.primaryColour,
     borderWidth: 1,
   },
   loadingText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#6b7280',
+    color: Colours.black,
   },
   errorText: {
     fontSize: 14,
-    color: '#dc2626',
+    color: Colours.primaryColour,
     textAlign: 'center',
     marginBottom: 8,
   },
   retryButton: {
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
   },
   retryText: {
-    color: 'white',
+    color: Colours.white,
     fontSize: 12,
     fontWeight: '600',
   },
