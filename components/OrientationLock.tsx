@@ -77,7 +77,6 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
       <View style={styles.container}>
         <StatusBar hidden />
         <View style={styles.content}>
-          <Text style={styles.icon}>📱</Text>
           <Text style={styles.title}>Please Rotate Your Device</Text>
           <Text style={styles.subtitle}>
             This app works best in portrait mode.{'\n'}

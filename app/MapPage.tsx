@@ -483,7 +483,6 @@ const MapPage = () => {
         </Animated.View>
       </View>
 
-      {/* Database controls removed */}
 
 
       <View style={styles.bottomBanner}>
