@@ -1,14 +1,12 @@
 //Home Page of the App
 //Three Buttons: Begin Virtual Tour, First Thursdays, Donate
 
-import { primaryColor, white } from '@/constants/Colors';
+import { Colours } from '@/constants/Colours';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import React from 'react';
 import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// require('dotenv').config();
 
 // Cathedral Icon Component
 const CathedralIcon = () => (
@@ -22,15 +20,6 @@ const CathedralIcon = () => (
 );
 
 const CathedralHomePage = () => {
-
-  const navigation = useNavigation<any>();
-  const handleVirtualTour = () => {
-    // Handle virtual tour navigation
-    // navigation.navigate('CustomMap');
-    // navigate not working
-    // <Link href="/CustomMap" />;
-    console.log('Starting virtual tour...');
-  };
 
   //Donate button link to St Georges Cathedral website
   const handleDonate = () => {
@@ -57,10 +46,10 @@ const CathedralHomePage = () => {
         </Text>
 
         <View style={styles.buttonsContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleVirtualTour}>
+          <TouchableOpacity style={styles.button}>
             <Link style={styles.buttonText} href="/MapPage">
               Begin Virtual Tour
-              <MaterialIcons name="arrow-forward" size={24} color={primaryColor} style={{ marginLeft: 10, textAlignVertical: 'center' }} />
+              <MaterialIcons name="arrow-forward" size={24} color={Colours.primaryColour} style={{ marginLeft: 10, textAlignVertical: 'center' }} />
             </Link>
           </TouchableOpacity>
 
@@ -81,7 +70,7 @@ const CathedralHomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: primaryColor,
+    backgroundColor: Colours.primaryColour,
   },
   scrollContent: {
     paddingTop: 40,
@@ -102,7 +91,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: white, 
+    color: Colours.surfaceColour, 
     textAlign: 'center',
     fontFamily: 'PlayfairDisplay-Black',
     marginBottom: 14,
@@ -110,7 +99,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: white,
+    color: Colours.white,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 28,
@@ -118,22 +107,17 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontFamily: 'Inter-Regular', 
   },
-  buttonGroup: {
-    width: '100%',
-    alignItems: 'center',
-    gap: 16
-  },
   button: {
-    backgroundColor: white,
+    backgroundColor: Colours.white,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#8F000D',
+    borderColor: Colours.primaryColour,
     marginBottom: 12,
     minWidth: 220,
     minHeight: 50,
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -145,7 +129,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   buttonText: {
-    color: primaryColor, 
+    color: Colours.primaryColour, 
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',

@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError, onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as nodemailer from "nodemailer";
 import PDFDocument from "pdfkit";
@@ -15,32 +15,38 @@ if (!admin.apps.length) {
   }
 }
 
-export const generateReport = onCall({enforceAppCheck: true}, async (request) => {
-//enforceAppCheck: true allows appcheck to validate
+export const generateReport =  onRequest(async (req, res) => {
   try {
 
     console.log("Starting report generation...");
-    
-    // Check if Firebase Admin is properly initialized
-    if (!admin.apps.length) {
-      throw new Error("Firebase Admin not properly initialized");
-    }
-    
+      
     const db = admin.firestore();
 
-    // Fetch analytics data
-    console.log("Fetching analytics data from Firestore...");
-    const viewsSnap = await db.collection("website_views").get();
-    const mapViewsSnap = await db.collection("map_views").get();
-    const poiViewsSnap = await db.collection("poi_views").get();
-    const poiClicksSnap = await db.collection("poi_clicks").get();
-    const poiInteractionsSnap = await db.collection("poi_interactions").get();
-    const sessionDurationsSnap = await db.collection("session_durations").get();
+    // Fetch analytics data for current month
+    console.log("Fetching analytics data from Firestore for current month...");
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    console.log(`Filtering data from ${startOfMonth.toISOString()} to ${endOfMonth.toISOString()}`);
+    
+    const viewsSnap = await db.collection("website_views")
+      .where("timestamp", ">=", startOfMonth)
+      .where("timestamp", "<=", endOfMonth)
+      .get();
+    const poiClicksSnap = await db.collection("poi_clicks")
+      .where("timestamp", ">=", startOfMonth)
+      .where("timestamp", "<=", endOfMonth)
+      .get();
+    const sessionDurationsSnap = await db.collection("session_durations")
+      .where("timestamp", ">=", startOfMonth)
+      .where("timestamp", "<=", endOfMonth)
+      .get();
 
-    console.log(`Fetched data: ${viewsSnap.size} website views, ${sessionDurationsSnap.size} sessions`);
+    console.log(`Fetched data: ${viewsSnap.size} website views, ${sessionDurationsSnap.size} sessions for current month`);
 
-    const totalViews = viewsSnap.size + mapViewsSnap.size;
-    const totalClicks = poiClicksSnap.size + poiInteractionsSnap.size;
+    const totalViews = viewsSnap.size ;
+    const totalClicks = poiClicksSnap.size ;
 
     // Calculate session duration statistics
     const durationStats = { short: 0, medium: 0, long: 0 };
@@ -55,7 +61,7 @@ export const generateReport = onCall({enforceAppCheck: true}, async (request) =>
     // Calculate top 5 POIs by views
     const poiStats = new Map<string, number>();
 
-    poiViewsSnap.docs.forEach(doc => {
+    poiClicksSnap.docs.forEach(doc => {
       const data = doc.data();
       const key = `${data.poiTitle} (ID: ${data.poiId})`;
       poiStats.set(key, (poiStats.get(key) || 0) + 1);
@@ -68,7 +74,7 @@ export const generateReport = onCall({enforceAppCheck: true}, async (request) =>
 
     // Create PDF
     console.log("Generating PDF report...");
-    const pdfBuffer = await generatePdfReport(totalViews, totalClicks, topPOIs, durationStats);
+    const pdfBuffer = await generatePdfReport(totalViews, totalClicks, topPOIs, durationStats, false);
     console.log(`PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     // Send Email with fallback
@@ -76,11 +82,11 @@ export const generateReport = onCall({enforceAppCheck: true}, async (request) =>
     try {
       await sendEmail(pdfBuffer, "Website Analytics Report - Manual");
       console.log("Email sent successfully!");
-     return { success: true, message: "Report generated and emailed successfully." };
+       res.status(200).send("Report generated and emailed successfully.");
     } catch (emailError) {
       console.error("Email sending failed, but PDF was generated successfully:", emailError);
       // Return success but mention email issue
-      return { success: true, message: "Report generated successfully, but email delivery failed. Please check email configuration." };
+      res.status(500).send("Report generated successfully, but email delivery failed. Please check email configuration.");
     }
   } catch (error) {
     console.error("Error generating report:", error);
@@ -92,9 +98,9 @@ export const generateReport = onCall({enforceAppCheck: true}, async (request) =>
       console.error("Error stack:", error.stack);
     }
 
-throw new HttpsError(
-  "internal", "Failed to generate report: ${error instanceof Error ? error.message : 'Unknown error'}"
-      );
+    throw new HttpsError(
+      "internal", `Failed to generate report: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 });
 
@@ -106,16 +112,31 @@ export const sendMonthlyReport = onSchedule(
   async (event) => {
     const db = admin.firestore();
 
-    // Fetch analytics data
-    const viewsSnap = await db.collection("website_views").get();
-    const mapViewsSnap = await db.collection("map_views").get();
-    const poiViewsSnap = await db.collection("poi_views").get();
-    const poiClicksSnap = await db.collection("poi_clicks").get();
-    const poiInteractionsSnap = await db.collection("poi_interactions").get();
-    const sessionDurationsSnap = await db.collection("session_durations").get();
+    // Fetch analytics data for previous month (since this runs on the 1st)
+    console.log("Fetching analytics data from Firestore for previous month...");
+    const now = new Date();
+    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    
+    console.log(`Filtering data from ${startOfPrevMonth.toISOString()} to ${endOfPrevMonth.toISOString()}`);
+    
+    const viewsSnap = await db.collection("website_views")
+      .where("timestamp", ">=", startOfPrevMonth)
+      .where("timestamp", "<=", endOfPrevMonth)
+      .get();
+    const poiClicksSnap = await db.collection("poi_clicks")
+      .where("timestamp", ">=", startOfPrevMonth)
+      .where("timestamp", "<=", endOfPrevMonth)
+      .get();
+    const sessionDurationsSnap = await db.collection("session_durations")
+      .where("timestamp", ">=", startOfPrevMonth)
+      .where("timestamp", "<=", endOfPrevMonth)
+      .get();
 
-    const totalViews = viewsSnap.size + mapViewsSnap.size;
-    const totalClicks = poiClicksSnap.size + poiInteractionsSnap.size;
+    console.log(`Fetched data: ${viewsSnap.size} website views, ${sessionDurationsSnap.size} sessions for previous month`);
+
+    const totalViews = viewsSnap.size ;
+    const totalClicks = poiClicksSnap.size ;
 
     // Calculate session duration statistics
     const durationStats = { short: 0, medium: 0, long: 0 };
@@ -130,7 +151,7 @@ export const sendMonthlyReport = onSchedule(
     // Calculate top 5 POIs by views
     const poiStats = new Map<string, number>();
 
-    poiViewsSnap.docs.forEach(doc => {
+    poiClicksSnap.docs.forEach(doc => {
       const data = doc.data();
       const key = `${data.poiTitle} (ID: ${data.poiId})`;
       poiStats.set(key, (poiStats.get(key) || 0) + 1);
@@ -142,16 +163,18 @@ export const sendMonthlyReport = onSchedule(
       .map(([name, views]) => ({ name, views }));
 
     // Create PDF
-    const pdfBuffer = await generatePdfReport(totalViews, totalClicks, topPOIs, durationStats);
+    const pdfBuffer = await generatePdfReport(totalViews, totalClicks, topPOIs, durationStats, true);
 
     // Send Email
     await sendEmail(pdfBuffer, "TourApp Analytics Report - Monthly");
   });
+
 async function generatePdfReport(
   views: number,
   clicks: number,
   topPOIs: { name: string; views: number }[],
-  durationStats: { short: number; medium: number; long: number }
+  durationStats: { short: number; medium: number; long: number },
+  isMonthlyReport: boolean = false
 ) {
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ margin: 40 });
@@ -171,19 +194,31 @@ async function generatePdfReport(
 
     // Date range and contact info
     const currentDate = new Date();
-    const endMonth = currentDate.toLocaleDateString("en-US", { month: "long" });
-    const year = currentDate.getFullYear();
+    let dateRangeText: string;
+    
+    if (isMonthlyReport) {
+      // For monthly report, show previous month
+      const prevMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+      const monthName = prevMonth.toLocaleDateString("en-US", { month: "long" });
+      const year = prevMonth.getFullYear();
+      dateRangeText = `${monthName} ${year}`;
+    } else {
+      // For manual report, show current month
+      const monthName = currentDate.toLocaleDateString("en-US", { month: "long" });
+      const year = currentDate.getFullYear();
+      dateRangeText = `${monthName} ${year}`;
+    }
 
     doc
       .fontSize(10)
       .fillColor("#666666")
-      .text(`March to ${endMonth} ${year}`, 60, 110)
+      .text(dateRangeText, 60, 110)
       .text("Contact: jwehart.7@gmail.com", { align: "right", continued: false });
 
     // Large visitor count
     doc.fontSize(72).fillColor("#4A90A4").text(views.toString(), 60, 160);
 
-    doc.fontSize(24).fillColor("#333333").text("Visitors", 200, 200);
+    doc.fontSize(24).fillColor("#333333").text("Visitors", 220, 200);
 
     // Horizontal line
     doc
