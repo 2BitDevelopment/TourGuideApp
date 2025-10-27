@@ -7,7 +7,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 export interface AnalyticsEvent {
-  type: 'poi_view' | 'poi_click' | 'map_view' | 'page_view';
+  type: 'poi_click' | 'page_view';
   poiId?: number;
   poiTitle?: string;
   sessionId?: string;
@@ -20,27 +20,7 @@ export class Analytics {
   private static sessionStartTime: number = Date.now();
   private static lastActivityTime: number = Date.now();
 
-  /**
-   * Track when a user views a POI (opens the bottom sheet)
-   */
-  static async trackPOIView(poiId: number, poiTitle: string): Promise<void> {
-    try {
-      Analytics.updateActivity();
-      await addDoc(collection(db, 'poi_views'), {
-        type: 'poi_view',
-        poiId,
-        poiTitle,
-        sessionId: Analytics.sessionId,
-        timestamp: serverTimestamp(),
-        metadata: {
-          platform: 'web',
-          action: 'sheet_opened'
-        }
-      });
-    } catch (error) {
-      console.error('Failed to track POI view:', error);
-    }
-  }
+
 
   /**
    * Track when a user clicks/taps on a POI marker
@@ -64,25 +44,7 @@ export class Analytics {
     }
   }
 
-  /**
-   * Track map page views
-   */
-  static async trackMapView(): Promise<void> {
-    try {
-      Analytics.updateActivity();
-      await addDoc(collection(db, 'map_views'), {
-        type: 'map_view',
-        sessionId: Analytics.sessionId,
-        timestamp: serverTimestamp(),
-        metadata: {
-          platform: 'web',
-          page: 'MapPage'
-        }
-      });
-    } catch (error) {
-      console.error('Failed to track map view:', error);
-    }
-  }
+
 
   /**
    * Track general page views for the website
@@ -104,27 +66,7 @@ export class Analytics {
     }
   }
 
-  /**
-   * Track POI interactions (like "Learn More" button clicks)
-   */
-  static async trackPOIInteraction(poiId: number, poiTitle: string, action: string): Promise<void> {
-    try {
-      Analytics.updateActivity();
-      await addDoc(collection(db, 'poi_interactions'), {
-        type: 'poi_interaction',
-        poiId,
-        poiTitle,
-        sessionId: Analytics.sessionId,
-        timestamp: serverTimestamp(),
-        metadata: {
-          platform: 'web',
-          action
-        }
-      });
-    } catch (error) {
-      console.error('Failed to track POI interaction:', error);
-    }
-  }
+
 
   /**
    * Get current session ID
