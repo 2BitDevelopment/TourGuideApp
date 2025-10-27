@@ -18,6 +18,9 @@ import { Analytics } from '../util/Analytics';
 const fallbackImg = require('../assets/images/react-logo.png');
 const floorplanAsset = Asset.fromModule(require('../assets/images/cathedral-floor.svg'));
 
+const SVG_WIDTH = 573;
+const SVG_HEIGHT = 748;
+
 const MapPage = () => {
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
   const screenHeight = Dimensions.get('window').height;
@@ -179,7 +182,6 @@ const MapPage = () => {
 
     if (selectedMarker) {
       updateActivity();
-      Analytics.trackPOIView(selectedMarker.originalId || selectedMarker.id, selectedMarker.title);
     }
 
     setIsSheetVisible(true);
@@ -205,8 +207,8 @@ const MapPage = () => {
 
   const getPOIMapCoordinates = (poi: POI) => {
     // Use coordinates directly from Firebase
-    let x = poi.location.longitude;
-    let y = poi.location.latitude;
+    let x = poi.location.latitude;
+    let y = poi.location.longitude;
     
     // Convert to numbers if they're strings
     if (typeof x === 'string') x = parseFloat(x);
@@ -214,7 +216,7 @@ const MapPage = () => {
     
     // Ensure coordinates are valid numbers
     if (isNaN(x) || isNaN(y)) {
-      console.warn(`Invalid coordinates for POI ${poi.id}: x=${poi.location.longitude}, y=${poi.location.latitude}`);
+      console.warn(`Invalid coordinates for POI ${poi.id}: x=${poi.location.latitude}, y=${poi.location.longitude}`);
       return { x: 0.5, y: 0.5 }; // Fallback to center
     }
     
@@ -227,7 +229,8 @@ const MapPage = () => {
 
     setLoadingPOIs(true);
     try {
-      const pois = await DatabaseApi.getAllPOIsWithImages();
+      const pois = await DatabaseApi.getAllPOIs();
+      
       setDbPOIs(pois);
     } catch (error) {
       console.error('Failed to load POIs:', error);
@@ -242,17 +245,26 @@ const MapPage = () => {
 
   // Convert database POIs to map markers
   const databaseMarkers = useMemo(() => {
+    const scale = Math.min(mapSize.width / SVG_WIDTH, mapSize.height / SVG_HEIGHT);
+    const offsetX = (mapSize.width - SVG_WIDTH * scale) / 2;
+    const offsetY = (mapSize.height - SVG_HEIGHT * scale) / 2;
+
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
 
     return sortedPOIs.map((poi, index) => {
       const coords = getPOIMapCoordinates(poi); // Pass the POI object instead of just ID
       const imageUrl = imageUrls.get(poi.imageID);
 
+      const svgX = coords.x * SVG_WIDTH;
+      const svgY = coords.y * SVG_HEIGHT;
+      const screenX = offsetX + svgX * scale;
+      const screenY = offsetY + svgY * scale;
+
       return {
         id: index + 1,
         originalId: poi.id,
-        x: coords.x,
-        y: coords.y,
+        x: screenX / mapSize.width,
+        y: screenY / mapSize.height,
         title: poi.title,
         blurb: poi.text || poi.description,
         history: poi.description,
@@ -262,7 +274,7 @@ const MapPage = () => {
         poiData: poi
       };
     });
-  }, [dbPOIs, imageUrls]);
+  }, [dbPOIs, imageUrls, mapSize]);
 
   const allMarkers = useMemo(() => {
     return databaseMarkers;
@@ -272,7 +284,6 @@ const MapPage = () => {
 
   useEffect(() => {
     loadPOIsFromDatabase();
-    Analytics.trackMapView();
   }, []);
 
   useEffect(() => {
@@ -573,11 +584,7 @@ const MapPage = () => {
                     }).start();
                     
                     if (selectedMarker) {
-                      Analytics.trackPOIInteraction(
-                        selectedMarker.originalId || selectedMarker.id,
-                        selectedMarker.title,
-                        'swipe_up_gesture'
-                      );
+                      updateActivity();
                     }
                   }
                 },
@@ -655,12 +662,8 @@ const MapPage = () => {
                     setSelectedImageTitle(selectedMarker.title);
                     setImageModalVisible(true);
                     
-                    // Track analytics
-                    Analytics.trackPOIInteraction(
-                      selectedMarker.originalId || selectedMarker.id,
-                      selectedMarker.title,
-                      'image_inspected'
-                    );
+                    // Track user activity
+                    updateActivity();
                   }
                 }
               }}
@@ -671,7 +674,7 @@ const MapPage = () => {
                 style={styles.sheetImage} 
                 fallbackSource={fallbackImg}
                 resizeMode="cover"
-                onError={(error) => console.error('POI Image Error:', error)}
+                onError={(error: any) => console.error('POI Image Error:', error)}
               />
               
               {/* Add inspect overlay */}
@@ -710,7 +713,6 @@ const MapPage = () => {
                   const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
                   const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
                   setSheetId(prev.id);
-                  Analytics.trackPOIView(prev.originalId || prev.id, prev.title);
                 }}
               >
                 <Text style={styles.sheetBackText}>
@@ -729,13 +731,6 @@ const MapPage = () => {
                   onPress={() => {
                     updateActivity();
                     handleSpeak();
-                    if (selectedMarker) {
-                      Analytics.trackPOIInteraction(
-                        selectedMarker.originalId || selectedMarker.id,
-                        selectedMarker.title,
-                        'audio_guide_clicked'
-                      );
-                    }
                   }}
                   accessibilityRole="button"
                 >
@@ -771,7 +766,6 @@ const MapPage = () => {
                   const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
                   const next = allMarkers[(idx + 1) % allMarkers.length];
                   setSheetId(next.id);
-                  Analytics.trackPOIView(next.originalId || next.id, next.title);
                 }}
               >
                 <Text style={[styles.endTourPillText, styles.pillGhostText]}>
