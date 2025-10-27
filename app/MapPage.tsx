@@ -44,9 +44,6 @@ const MapPage = () => {
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
   
-  // Track viewed POIs
-  const [viewedPOIs, setViewedPOIs] = useState<Set<number>>(new Set());
-  
   // Image modal state
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string>('');
@@ -182,10 +179,6 @@ const MapPage = () => {
 
     if (selectedMarker) {
       updateActivity();
-      Analytics.trackPOIView(selectedMarker.originalId || selectedMarker.id, selectedMarker.title);
-      
-      // Mark POI as viewed
-      setViewedPOIs(prev => new Set([...prev, selectedMarker.id]));
     }
 
     setIsSheetVisible(true);
@@ -227,6 +220,29 @@ const MapPage = () => {
     return { x, y };
   };
 
+  const getResponsivePOIPosition = (poi: POI) => {
+    const coords = getPOIMapCoordinates(poi);
+    const screenWidth = Dimensions.get('window').width;
+    
+    // Adjust coordinates based on screen width
+    let adjustedX = coords.x;
+    let adjustedY = coords.y;
+    
+    if (screenWidth > 1200) {
+      //Large screens change horizontally much more
+      adjustedX = coords.x * 0.35 + 0.325; 
+    } else if (screenWidth > 900) {
+      //Medium too large screens medium change
+      adjustedX = coords.x * 0.55 + 0.225; 
+    } else if (screenWidth < 768) {
+      // Small screens 
+      adjustedX = coords.x * 1.01 - 0.005; 
+    }
+    //Medium screens use original coordinates
+    
+    return { x: adjustedX, y: adjustedY };
+  };
+
 
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
@@ -252,7 +268,7 @@ const MapPage = () => {
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
 
     return sortedPOIs.map((poi, index) => {
-      const coords = getPOIMapCoordinates(poi); // Pass the POI object instead of just ID
+      const coords = getResponsivePOIPosition(poi); // Use responsive positioning
       const imageUrl = imageUrls.get(poi.imageID);
 
       return {
@@ -472,8 +488,7 @@ const MapPage = () => {
               style={[styles.pin, {
                 left: `${m.x * 100}%`,
                 top: `${m.y * 100}%`,
-                backgroundColor: Colours.primaryColour,
-                opacity: viewedPOIs.has(m.id) ? 0.4 : 1.0
+                backgroundColor: Colours.primaryColour
               }]}
               onPress={() => {
                 // Update activity and track POI click analytics
