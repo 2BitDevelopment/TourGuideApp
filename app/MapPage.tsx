@@ -46,6 +46,9 @@ const MapPage = () => {
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
   
+  // Track viewed POIs
+  const [viewedPOIs, setViewedPOIs] = useState<Set<number>>(new Set());
+  
   // Session tracking hook - returns updateActivity function
   const updateActivity = useSessionTracking('MapPage');
 
@@ -183,6 +186,9 @@ const MapPage = () => {
     if (selectedMarker) {
       updateActivity();
       Analytics.trackPOIView(selectedMarker.originalId || selectedMarker.id, selectedMarker.title);
+      
+      // Mark POI as viewed
+      setViewedPOIs(prev => new Set([...prev, selectedMarker.id]));
     }
     
     setIsSheetVisible(true);
@@ -400,7 +406,8 @@ const MapPage = () => {
               style={[styles.pin, {
                 left: `${m.x * 100}%`,
                 top: `${m.y * 100}%`,
-                backgroundColor: '#8F000D'
+                backgroundColor: '#8F000D',
+                opacity: viewedPOIs.has(m.id) ? 0.4 : 1.0
               }]}
               onPress={() => {
                 // Update activity and track POI click analytics
