@@ -1,7 +1,7 @@
 // Database API Types
 export interface Location {
-  //latitude: number;
-  //longitude: number;
+  latitude: number;  // 0-1 range for percentage positioning
+  longitude: number; // 0-1 range for percentage positioning
   name?: string;
 }
 
@@ -20,6 +20,7 @@ export interface POI {
 export interface FirestorePOI {
   title: string;
   text: string;
+  text2: string;
   location: Location;
   description: string;
   imageID: string;

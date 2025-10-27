@@ -2,6 +2,7 @@ import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Dimensions,
+    Platform,
     StatusBar,
     StyleSheet,
     Text,
@@ -17,8 +18,34 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
   const [wasLandscape, setWasLandscape] = useState(false);
   const pathname = usePathname();
 
+  //Detect if device is mobile vs desktop
+  const isMobileDevice = () => {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      return true; // Native mobile apps are always mobile
+    }
+    
+    // For web check screen size and user agent
+    if (Platform.OS === 'web') {
+      const { width, height } = Dimensions.get('window');
+      const isSmallScreen = width < 768 || height < 768; // Tablet breakpoint
+      
+      //Check if its a touch device
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      return isSmallScreen || isTouchDevice;
+    }
+    
+    return false; // Default to desktop for other platforms
+  };
+
   useEffect(() => {
     const updateOrientation = () => {
+      // Only apply orientation lock on mobile devices
+      if (!isMobileDevice()) {
+        setIsLandscape(false);
+        return;
+      }
+
       const { width, height } = Dimensions.get('window');
       const newIsLandscape = width > height;
       
@@ -43,7 +70,8 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
     };
   }, [wasLandscape]);
 
-  if (isLandscape) {
+  // Only show orientation lock on mobile devices in landscape
+  if (isMobileDevice() && isLandscape) {
     return (
       <View style={styles.container}>
         <StatusBar hidden />

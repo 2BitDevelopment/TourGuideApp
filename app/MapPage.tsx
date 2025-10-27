@@ -4,8 +4,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
 import { Link } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
+import { CookieConsent } from '../components/CookieConsent';
 import { ImageModal } from '../components/ImageModal';
 import { OrientationLock } from '../components/OrientationLock';
 import { POIImage } from '../components/POIImage';
@@ -47,6 +48,9 @@ const MapPage = () => {
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string>('');
   const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
+  
+  // Cookie consent state
+  const [showCookieConsent, setShowCookieConsent] = useState(true);
   
 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -199,40 +203,22 @@ const MapPage = () => {
   };
 
 
-  // Returns percentage coordinates for poi's (0-1 range, scales with map size)
-  const getPOIMapCoordinates = (poiId: number) => {
-    const poiCoordinates: Record<number, { x: number, y: number }> = {
-      1: { x: 0.15, y: 0.25 },   // Entrance area
-      2: { x: 0.35, y: 0.20 },   // Nave left side
-      3: { x: 0.55, y: 0.15 },   // Nave center
-      4: { x: 0.75, y: 0.25 },   // Nave right side
-      5: { x: 0.85, y: 0.40 },   // Side chapel
-      6: { x: 0.80, y: 0.60 },   // Altar area
-      7: { x: 0.65, y: 0.70 },   // Choir area
-      8: { x: 0.45, y: 0.75 },   // Center back
-      9: { x: 0.25, y: 0.70 },   // Left side back
-      10: { x: 0.10, y: 0.55 },  // Left side chapel
-      11: { x: 0.20, y: 0.40 },  // Left nave
-      12: { x: 0.40, y: 0.35 }, // Left center
-      13: { x: 0.60, y: 0.45 }, // Center area
-      14: { x: 0.70, y: 0.30 }, // Right center
-      15: { x: 0.50, y: 0.60 }, // Center altar
-      16: { x: 0.30, y: 0.55 }, // Left altar area
-      17: { x: 0.90, y: 0.80 }, // Far right corner
-      18: { x: 0.05, y: 0.30 }, // Far left entrance
-      19: { x: 0.95, y: 0.35 }, // Far right side
-      20: { x: 0.12, y: 0.65 }, // Left side middle
-      21: { x: 0.88, y: 0.75 }, // Right side back
-      22: { x: 0.18, y: 0.15 }, // Left front
-      23: { x: 0.82, y: 0.20 }, // Right front
-      24: { x: 0.48, y: 0.25 }, // Center front
-      25: { x: 0.58, y: 0.80 }, // Center back
-      26: { x: 0.38, y: 0.50 }, // Left center
-      27: { x: 0.68, y: 0.50 }, // Right center
-    };
-
-    const coords = poiCoordinates[poiId] || { x: 0.5, y: 0.5 };
-    return coords;
+  const getPOIMapCoordinates = (poi: POI) => {
+    // Use coordinates directly from Firebase
+    let x = poi.location.longitude;
+    let y = poi.location.latitude;
+    
+    // Convert to numbers if they're strings
+    if (typeof x === 'string') x = parseFloat(x);
+    if (typeof y === 'string') y = parseFloat(y);
+    
+    // Ensure coordinates are valid numbers
+    if (isNaN(x) || isNaN(y)) {
+      console.warn(`Invalid coordinates for POI ${poi.id}: x=${poi.location.longitude}, y=${poi.location.latitude}`);
+      return { x: 0.5, y: 0.5 }; // Fallback to center
+    }
+    
+    return { x, y };
   };
 
 
@@ -242,9 +228,7 @@ const MapPage = () => {
     setLoadingPOIs(true);
     try {
       const pois = await DatabaseApi.getAllPOIsWithImages();
-
       setDbPOIs(pois);
-
     } catch (error) {
       console.error('Failed to load POIs:', error);
       Alert.alert(
@@ -261,7 +245,7 @@ const MapPage = () => {
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
 
     return sortedPOIs.map((poi, index) => {
-      const coords = getPOIMapCoordinates(poi.id);
+      const coords = getPOIMapCoordinates(poi); // Pass the POI object instead of just ID
       const imageUrl = imageUrls.get(poi.imageID);
 
       return {
@@ -310,6 +294,21 @@ const MapPage = () => {
 
     checkDataLoaded();
   }, [dbPOIs, isLoadingImages, loadingPOIs, imageUrls]);
+
+  // Handle Android back button to close sheet
+  useEffect(() => {
+    const backAction = () => {
+      if (isSheetVisible) {
+        setIsSheetVisible(false);
+        return true; 
+      }
+      return false; 
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, [isSheetVisible]);
 
   useEffect(() => {
     let isMounted = true;
@@ -521,19 +520,30 @@ const MapPage = () => {
                 <Text style={styles.bannerTitle}>{selectedMarker.title}</Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={() => {
-                  updateActivity();
-                  synthRef.current.cancel();
-                  setSpeaking(false);
-                  const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
-                  const next = allMarkers[(idx + 1) % allMarkers.length];
-                  setSheetId(next.id);
-                }}
-              >
-                <MaterialIcons name="chevron-right" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-              </TouchableOpacity>
+              {selectedMarker.id === 26 ? (
+                <TouchableOpacity 
+                  style={styles.endTourButton}
+                  onPress={() => {
+                    updateActivity();
+                    // Navigate to Thank You page
+                    window.location.href = '/ThankYou';
+                  }}
+                >
+                  <Text style={styles.endTourButtonText}>End Tour</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.navButton}
+                  onPress={() => {
+                    updateActivity();
+                    const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                    const next = allMarkers[(idx + 1) % allMarkers.length];
+                    setSheetId(next.id);
+                  }}
+                >
+                  <Text style={styles.navButtonText}>›</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -731,23 +741,31 @@ const MapPage = () => {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.navPillNext}
-              onPress={() => {
-                updateActivity();
-                synthRef.current.cancel();
-                setSpeaking(false);
-                const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
-                const next = allMarkers[(idx + 1) % allMarkers.length];
-                setSheetId(next.id);
-                Analytics.trackPOIView(next.originalId || next.id, next.title);
-              }}
-            >
-              <Text style={styles.pillText}>
-                Next
-                <MaterialIcons name="keyboard-arrow-right" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-              </Text>
-            </TouchableOpacity>
+            {selectedMarker?.id === 26 ? (
+              <TouchableOpacity
+                style={styles.endTourPill}
+                onPress={() => {
+                  updateActivity();
+                  // Navigate to Thank You page
+                  window.location.href = '/ThankYou';
+                }}
+              >
+                <Text style={styles.endTourPillText}>End Tour</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.navPill}
+                onPress={() => {
+                  updateActivity();
+                  const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
+                  const next = allMarkers[(idx + 1) % allMarkers.length];
+                  setSheetId(next.id);
+                  Analytics.trackPOIView(next.originalId || next.id, next.title);
+                }}
+              >
+                <Text style={[styles.pillText, styles.pillGhostText]}>Next ›</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </Animated.View>
       )}
@@ -759,6 +777,9 @@ const MapPage = () => {
         title={selectedImageTitle}
         onClose={() => setImageModalVisible(false)}
       />
+      
+      {/* Cookie Consent Banner */}
+      {showCookieConsent && <CookieConsent />}
     </View>
     </OrientationLock>
   );
@@ -1180,7 +1201,50 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
-    color: Colours.primaryColour
+  },
+  endTourPill: {
+    backgroundColor: '#8F000D',
+    borderWidth: 1,
+    borderColor: '#8F000D',
+    paddingVertical: 0,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    minWidth: 96,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  endTourPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+    color: '#FFFFFF',
+  },
+  pillGhost: { 
+    backgroundColor: '#FFF8F7',
+    borderWidth: 1,
+    borderColor: '#FFDAD6',
+  },
+  pillGhostText: { 
+    color: '#8F000D' 
+  },
+  pillPrimary: { 
+    backgroundColor: '#8F000D',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  pillPrimaryText: { 
+    color: 'white',
+    fontWeight: '700',
   },
   bottomBanner: {
     position: 'absolute',
@@ -1261,6 +1325,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  navButtonText: {
+    color: '#8F000D',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+  },
+  endTourButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 22,
+    backgroundColor: '#8F000D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8F000D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 80,
+  },
+  endTourButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-Bold',
   },
   bannerFooter: {
     paddingHorizontal: 20,

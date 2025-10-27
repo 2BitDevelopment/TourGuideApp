@@ -69,8 +69,8 @@ export class DatabaseApi {
           text: data.text || '',
           text2: data.text2 || '',
           location: {
-            // latitude: data.location?.latitude || 0,    // Not used using hardcoded map coordinates
-            // longitude: data.location?.longitude || 0,  // Not used, using hardcoded map coordinates
+            latitude: data.location?.latitude || 0,
+            longitude: data.location?.longitude || 0,
             name: data.location?.name || ''
           },
           description: data.description || '',
@@ -105,9 +105,8 @@ export class DatabaseApi {
           text: data.text || '',
           text2: data.text2 || '',
           location: {
-            // latitude: data.location?.latitude || 0,    // Not used, using hardcoded map coordinates
-            // longitude: data.location?.longitude || 0,  // Not used ,using hardcoded map coordinates
-            name: data.location?.name || ''
+            latitude: data.location?.latitude || 0,
+            longitude: data.location?.longitude || 0,
           },
           description: data.description || '',
           imageID: `${data.imageID || ''}` 
