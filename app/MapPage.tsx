@@ -1,12 +1,14 @@
 import { Colours } from '@/constants/Colours';
+import { useImageLoading } from '@/hooks/useImageLoading';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
 import { Link } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
+import { ImageModal } from '../components/ImageModal';
+import { OrientationLock } from '../components/OrientationLock';
 import { POIImage } from '../components/POIImage';
-import { useImageLoading } from '../hooks/useImageLoading';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
 import { Analytics } from '../util/Analytics';
@@ -21,6 +23,11 @@ const MapPage = () => {
   const [sheetId, setSheetId] = useState<number | null>(1);
   const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
   const [isSheetVisible, setIsSheetVisible] = useState(false);
+
+  const [speaking, setSpeaking] = useState(false);
+  const synthRef = useRef(window.speechSynthesis);
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   const pan = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
   const lastPan = useRef({ x: 0, y: 0 });
@@ -35,7 +42,16 @@ const MapPage = () => {
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
+  
+  // Image modal state
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImageUri, setSelectedImageUri] = useState<string>('');
+  const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
+  
 
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  
+  // Session tracking hook - returns updateActivity function
   const updateActivity = useSessionTracking('MapPage');
 
   const onMapLayout = (e: LayoutChangeEvent) => {
@@ -281,6 +297,20 @@ const MapPage = () => {
     }
   }, [dbPOIs, preloadPOIImages]);
 
+
+  useEffect(() => {
+    const checkDataLoaded = () => {
+      if (dbPOIs.length > 0 && !isLoadingImages && !loadingPOIs) {
+        const hasImages = dbPOIs.some(poi => imageUrls.has(poi.imageID));
+        if (hasImages || dbPOIs.length > 0) {
+          setIsDataLoaded(true);
+        }
+      }
+    };
+
+    checkDataLoaded();
+  }, [dbPOIs, isLoadingImages, loadingPOIs, imageUrls]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -314,13 +344,23 @@ const MapPage = () => {
     };
   }, []);
 
+  const LoadingScreen = () => (
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingTitle}>St. George's Cathedral</Text>
+      <Text style={styles.loadingSubtitle}>Loading your virtual tour...</Text>
+      <ActivityIndicator 
+        size="large" 
+        color={Colours.primaryColour} 
+        style={styles.loadingSpinner}
+      />
+      <Text style={styles.loadingText}>Preparing points of interest</Text>
+    </View>
+  );
+  if (!isDataLoaded) {
+    return <LoadingScreen />;
+  }
 
   // Text-to-speech functionality for POI items
-
-  const [speaking, setSpeaking] = useState(false);
-  const synthRef = useRef(window.speechSynthesis);
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
-
   const handleSpeak = () => {
     if (!selectedMarker) return;
 
@@ -361,7 +401,8 @@ const MapPage = () => {
   // Structure of page
 
   return (
-    <View style={styles.container}>
+    <OrientationLock>
+      <View style={styles.container}>
       <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
         <TouchableOpacity style={styles.backButton}
           onPress={() => {
@@ -499,7 +540,39 @@ const MapPage = () => {
 
         {selectedMarker && (
           <View style={styles.bannerFooter}>
-            <View style={styles.swipeUpButton}>
+            <View 
+              style={styles.swipeUpButton}
+              {...PanResponder.create({
+                onStartShouldSetPanResponder: () => true,
+                onMoveShouldSetPanResponder: (_, gestureState) => {
+                  return Math.abs(gestureState.dy) > 5;
+                },
+                onPanResponderGrant: () => {
+                  updateActivity();
+                },
+                onPanResponderMove: (_, gestureState) => {
+                  // If swiping up (negative dy), move the sheet
+                  if (gestureState.dy < -20) {
+                    setIsSheetVisible(true);
+                    Animated.spring(sheetTranslateY, {
+                      toValue: 0,
+                      useNativeDriver: true,
+                    }).start();
+                    
+                    if (selectedMarker) {
+                      Analytics.trackPOIInteraction(
+                        selectedMarker.originalId || selectedMarker.id,
+                        selectedMarker.title,
+                        'swipe_up_gesture'
+                      );
+                    }
+                  }
+                },
+                onPanResponderRelease: () => {
+                  // Handle tap if no significant movement
+                },
+              }).panHandlers}
+            >
               <MaterialIcons name="keyboard-double-arrow-up" size={20} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
               <Text style={styles.swipeUpText}>Swipe up for more information</Text>
             </View>
@@ -559,15 +632,41 @@ const MapPage = () => {
               </View>
               <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
             </View>
-
-            <POIImage
-              imageID={selectedMarker.imageID}
-              style={styles.sheetImage}
-              fallbackSource={fallbackImg}
-              resizeMode="cover"
-              onError={(error) => console.error('POI Image Error:', error)}
-            />
-
+            
+            <TouchableOpacity
+              onPress={() => {
+                if (selectedMarker.imageID) {
+                  const imageUrl = imageUrls.get(selectedMarker.imageID);
+                  if (imageUrl) {
+                    setSelectedImageUri(imageUrl);
+                    setSelectedImageTitle(selectedMarker.title);
+                    setImageModalVisible(true);
+                    
+                    // Track analytics
+                    Analytics.trackPOIInteraction(
+                      selectedMarker.originalId || selectedMarker.id,
+                      selectedMarker.title,
+                      'image_inspected'
+                    );
+                  }
+                }
+              }}
+              style={styles.imageContainer}
+            >
+              <POIImage 
+                imageID={selectedMarker.imageID} 
+                style={styles.sheetImage} 
+                fallbackSource={fallbackImg}
+                resizeMode="cover"
+                onError={(error) => console.error('POI Image Error:', error)}
+              />
+              
+              {/* Add inspect overlay */}
+              <View style={styles.inspectOverlay}>
+                <Text style={styles.inspectText}>Tap to inspect</Text>
+              </View>
+            </TouchableOpacity>
+            
             <View style={styles.contentSection}>
               <Text style={styles.sheetBody}>
                 {selectedMarker.blurb || 'Discover the rich history and significance of this sacred space within St. George\'s Cathedral.'}
@@ -652,7 +751,16 @@ const MapPage = () => {
           </View>
         </Animated.View>
       )}
+      
+      {/* Image Inspection Modal */}
+      <ImageModal
+        visible={imageModalVisible}
+        imageUri={selectedImageUri}
+        title={selectedImageTitle}
+        onClose={() => setImageModalVisible(false)}
+      />
     </View>
+    </OrientationLock>
   );
 };
 
@@ -806,6 +914,24 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     overscrollBehavior: 'contain',
   },
+  sheetBackgroundOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colours.white,
+    zIndex: 999, 
+  },
+  sheetHandle: { 
+    alignSelf: 'center', 
+    width: 50, 
+    height: 5, 
+    borderRadius: 3, 
+    backgroundColor: Colours.primaryColour, 
+    marginBottom: 16,
+    opacity: 0.6,
+  },
   sheetTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -853,18 +979,71 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 20,
   },
+  imageContainer: {
+    position: 'relative',
+    marginBottom: 20,
+  },
+  inspectOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: Colours.black,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  inspectText: {
+    color: Colours.white,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colours.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colours.black,
+    fontFamily: 'PlayfairDisplay-Bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  loadingSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colours.black,
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  loadingSpinner: {
+    width: 40,
+    height: 40,
+    marginBottom: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colours.primaryColour,
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+  },
   contentSection: {
     marginBottom: 20,
   },
   sheetBody: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colours.black,
     lineHeight: 24,
     marginBottom: 12,
     fontFamily: 'Inter-Regular',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: Colours.primaryColour,
     marginBottom: 8,
@@ -966,7 +1145,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 0,
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 8,
+    paddingBottom: 0,
     alignSelf: 'center',
     shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
@@ -1045,6 +1224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    paddingHorizontal: 20,
   },
   bannerIndex: {
     width: 32,

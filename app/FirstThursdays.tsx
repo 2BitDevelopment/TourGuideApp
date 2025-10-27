@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colours.primaryColour,
     fontFamily: 'PlayfairDisplay-Bold',
-    marginBottom: 4,
+    marginBottom: 20,
   },
   footerSubtext: {
     fontSize: 14,

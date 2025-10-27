@@ -47,7 +47,7 @@ export const POIImage: React.FC<POIImageProps> = ({
     }
   }, [error, onError]);
 
-  const defaultFallback = require('../assets/images/react-logo.png');
+  const defaultFallback = require('../assets/images/ST_GEORGES_CATHEDRAL_LOGO.png');
   const imageSource = imageUrl ? { uri: imageUrl } : (fallbackSource || defaultFallback);
 
   if (isLoading && showLoadingIndicator) {
