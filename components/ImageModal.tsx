@@ -1,3 +1,4 @@
+import { Colours } from '@/constants/Colours';
 import React from 'react';
 import {
     Dimensions,
@@ -34,7 +35,7 @@ export const ImageModal: React.FC<ImageModalProps> = ({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <StatusBar backgroundColor="#000000" barStyle="light-content" />
+      <StatusBar backgroundColor={Colours.black} barStyle="light-content" />
       <SafeAreaView style={styles.container}>
         <View style={styles.overlay}>
           {/* Close Button */}
@@ -64,7 +65,7 @@ const { width, height } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colours.black,
   },
   overlay: {
     flex: 1,
@@ -79,18 +80,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#000000',
+    backgroundColor: Colours.black,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
   },
   closeButtonText: {
-    color: 'white',
+    color: Colours.white,
     fontSize: 18,
     fontWeight: '600',
   },
   title: {
-    color: 'white',
+    color: Colours.white,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',

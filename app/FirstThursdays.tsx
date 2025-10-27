@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   eventButtonText: {
-    color: 'white',
+    color: Colours.white,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',

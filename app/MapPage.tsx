@@ -499,19 +499,23 @@ const MapPage = () => {
         <View style={styles.bannerContent}>
           {selectedMarker && (
             <>
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={() => {
-                  updateActivity();
-                  synthRef.current.cancel();
-                  setSpeaking(false);
-                  const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
-                  const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
-                  setSheetId(prev.id);
-                }}
-              >
-                <MaterialIcons name="chevron-left" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-              </TouchableOpacity>
+              {selectedMarker.id >= 2 && selectedMarker.id <= 26 ? (
+                <TouchableOpacity
+                  style={styles.navButton}
+                  onPress={() => {
+                    updateActivity();
+                    synthRef.current.cancel();
+                    setSpeaking(false);
+                    const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
+                    const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
+                    setSheetId(prev.id);
+                  }}
+                >
+                  <MaterialIcons name="chevron-left" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 44 }} />
+              )}
 
               <View style={styles.bannerCenter}>
                 <View style={styles.bannerIndex}>
@@ -697,23 +701,27 @@ const MapPage = () => {
           </ScrollView>
 
           <View style={styles.sheetFooter}>
-            <TouchableOpacity
-              style={styles.navPillPrev}
-              onPress={() => {
-                updateActivity();
-                synthRef.current.cancel();
-                setSpeaking(false);
-                const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
-                const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
-                setSheetId(prev.id);
-                Analytics.trackPOIView(prev.originalId || prev.id, prev.title);
-              }}
-            >
-              <Text style={styles.pillText}>
-                <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-                Previous
-              </Text>
-            </TouchableOpacity>
+            {selectedMarker?.id >= 2 && selectedMarker?.id <= 26 ? (
+              <TouchableOpacity
+                style={styles.navPillPrev}
+                onPress={() => {
+                  updateActivity();
+                  synthRef.current.cancel();
+                  setSpeaking(false);
+                  const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
+                  const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
+                  setSheetId(prev.id);
+                  Analytics.trackPOIView(prev.originalId || prev.id, prev.title);
+                }}
+              >
+                <Text style={styles.sheetBackText}>
+                  <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                  Previous
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 96 }} />
+            )}
 
             <View style={styles.audioBackdrop}>
               <View style={styles.audioDock}>
@@ -763,7 +771,7 @@ const MapPage = () => {
                   Analytics.trackPOIView(next.originalId || next.id, next.title);
                 }}
               >
-                <Text style={[styles.pillText, styles.pillGhostText]}>Next ›</Text>
+                <Text style={[styles.endTourPillText, styles.pillGhostText]}>Next ›</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -868,10 +876,11 @@ const styles = StyleSheet.create({
     color: Colours.primaryColour,
     fontSize: 24,
     fontWeight: '800',
-    textAlign: 'center',
+    textAlign: 'left',
     fontFamily: 'PlayfairDisplay-Bold',
     letterSpacing: 0.5,
     flex: 1,
+    paddingLeft: 45,
   },
   mapArea: {
     flex: 1,
@@ -1196,16 +1205,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 12,
   },
-  pillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Inter-Medium',
-    textAlign: 'center',
+  navPill: {
+    backgroundColor: Colours.white,
+    borderWidth: 1,
+    borderColor: Colours.primaryColour,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    minWidth: 96,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colours.primaryColour,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   endTourPill: {
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     borderWidth: 1,
-    borderColor: '#8F000D',
+    borderColor: Colours.primaryColour,
     paddingVertical: 0,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1213,7 +1233,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1224,26 +1244,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
-    color: '#FFFFFF',
+    color: Colours.white,
   },
   pillGhost: { 
-    backgroundColor: '#FFF8F7',
+    backgroundColor: Colours.surfaceColour,
     borderWidth: 1,
-    borderColor: '#FFDAD6',
+    borderColor: Colours.surfaceVariantColour,
   },
   pillGhostText: { 
-    color: '#8F000D' 
+    color: Colours.primaryColour 
   },
   pillPrimary: { 
-    backgroundColor: '#8F000D',
-    shadowColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
   },
   pillPrimaryText: { 
-    color: 'white',
+    color: Colours.white,
     fontWeight: '700',
   },
   bottomBanner: {
@@ -1327,7 +1347,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   navButtonText: {
-    color: '#8F000D',
+    color: Colours.primaryColour,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
@@ -1336,10 +1356,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 22,
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#8F000D',
+    shadowColor: Colours.primaryColour,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1347,7 +1367,7 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   endTourButtonText: {
-    color: '#FFFFFF',
+    color: Colours.white,
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter-Bold',

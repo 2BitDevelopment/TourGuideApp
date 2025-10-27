@@ -1,3 +1,4 @@
+import { Colours } from '@/constants/Colours';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -96,7 +97,7 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#8F000D',
+    backgroundColor: Colours.primaryColour,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colours.white,
     fontFamily: 'PlayfairDisplay-Bold',
     textAlign: 'center',
     marginBottom: 12,
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: Colours.white,
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
     lineHeight: 20,
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
   },
   arrow: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: Colours.white,
     fontWeight: 'bold',
   },
 });
