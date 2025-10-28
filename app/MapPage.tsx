@@ -611,7 +611,7 @@ const MapPage = () => {
                     setSheetId(next.id);
                   }}
                 >
-                  <Text style={styles.navButtonText}>›</Text>
+                  <MaterialIcons name="chevron-right" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
                 </TouchableOpacity>
               )}
             </>
