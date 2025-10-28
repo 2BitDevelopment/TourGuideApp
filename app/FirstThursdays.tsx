@@ -4,6 +4,9 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+////////////////////////////////////////////////
+// First Thursdays Page
+////////////////////////////////////////////////
 const FirstThursdays = () => {
   return (
     <View style={styles.container}>
@@ -53,8 +56,15 @@ const FirstThursdays = () => {
   );
 };
 
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colours.surfaceColour },
+  container: { 
+    flex: 1, 
+    backgroundColor: 
+    Colours.surfaceColour 
+  },
   scroll: {
     padding: 24,
     paddingBottom: 120,

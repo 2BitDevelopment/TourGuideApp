@@ -13,9 +13,9 @@ interface UseImageLoadingReturn {
   hasErrors: boolean;
 }
 
-/**
- * Custom hook for managing POI image loading with caching and error handling
- */
+////////////////////////////////////////////////
+// For Image component caching, loading, and error handling
+////////////////////////////////////////////////
 export const useImageLoading = (): UseImageLoadingReturn => {
   const [imageUrls, setImageUrls] = useState<Map<string, string | null>>(new Map());
   const [loadingStates, setLoadingStates] = useState<Map<string, boolean>>(new Map());
@@ -147,9 +147,10 @@ export const useImageLoading = (): UseImageLoadingReturn => {
   };
 };
 
-/**
- * Hook for loading a single image with loading state
- */
+
+////////////////////////////////////////////////
+// Hook for loading a single image with loading state
+////////////////////////////////////////////////
 export const useSingleImage = (imageID: string | undefined) => {
   const { imageUrls, loadingStates, errors, loadImage } = useImageLoading();
   

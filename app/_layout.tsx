@@ -6,6 +6,10 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+
+////////////////////////////////////////////////
+// Root Layout used for all pages
+////////////////////////////////////////////////
 export default function RootLayout() {
   const [loaded] = useFonts({
     'Inter-Regular': require('../assets/fonts/Inter-Regular.otf'),
@@ -23,7 +27,6 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      {/** Lock page scroll on web so the app sits in place */}
       {Platform.OS === 'web' && (
         <LockScroll />
       )}
@@ -39,6 +42,9 @@ export default function RootLayout() {
   );
 }
 
+////////////////////////////////////////////////
+// Prevent scrolling on web when orientation lock is active
+////////////////////////////////////////////////
 function LockScroll() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
