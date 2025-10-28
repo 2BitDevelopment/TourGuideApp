@@ -18,6 +18,9 @@ import { Analytics } from '../util/Analytics';
 const fallbackImg = require('../assets/images/react-logo.png');
 const floorplanAsset = Asset.fromModule(require('../assets/images/cathedral-floor.svg'));
 
+const SVG_WIDTH = 573;
+const SVG_HEIGHT = 748;
+
 const MapPage = () => {
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
   const screenHeight = Dimensions.get('window').height;
@@ -242,17 +245,26 @@ const MapPage = () => {
 
   // Convert database POIs to map markers
   const databaseMarkers = useMemo(() => {
+    const scale = Math.min(mapSize.width / SVG_WIDTH, mapSize.height / SVG_HEIGHT);
+    const offsetX = (mapSize.width - SVG_WIDTH * scale) / 2;
+    const offsetY = (mapSize.height - SVG_HEIGHT * scale) / 2;
+
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
 
     return sortedPOIs.map((poi, index) => {
       const coords = getPOIMapCoordinates(poi); // Pass the POI object instead of just ID
       const imageUrl = imageUrls.get(poi.imageID);
 
+      const svgX = coords.x * SVG_WIDTH;
+      const svgY = coords.y * SVG_HEIGHT;
+      const screenX = offsetX + svgX * scale;
+      const screenY = offsetY + svgY * scale;
+
       return {
         id: index + 1,
         originalId: poi.id,
-        x: coords.x,
-        y: coords.y,
+        x: screenX / mapSize.width,
+        y: screenY / mapSize.height,
         title: poi.title,
         blurb: poi.text || poi.description,
         history: poi.description,
@@ -262,7 +274,7 @@ const MapPage = () => {
         poiData: poi
       };
     });
-  }, [dbPOIs, imageUrls]);
+  }, [dbPOIs, imageUrls, mapSize]);
 
   const allMarkers = useMemo(() => {
     return databaseMarkers;
