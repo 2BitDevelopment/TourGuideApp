@@ -1,5 +1,4 @@
 import { Colours } from '@/constants/Colours';
-import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
@@ -14,12 +13,13 @@ interface OrientationLockProps {
   children: React.ReactNode;
 }
 
+////////////////////////////////////////////////
+// Rotate screen message
+////////////////////////////////////////////////
 export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) => {
   const [isLandscape, setIsLandscape] = useState(false);
   const [wasLandscape, setWasLandscape] = useState(false);
-  const pathname = usePathname();
 
-  
   const isMobileDevice = () => {
     if (Platform.OS === 'ios' || Platform.OS === 'android') {
       return true;
@@ -84,6 +84,9 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
   return <>{children}</>;
 };
 
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -99,10 +102,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     maxWidth: 300,
     width: '100%',
-  },
-  icon: {
-    fontSize: 60,
-    marginBottom: 20,
   },
   title: {
     fontSize: 20,

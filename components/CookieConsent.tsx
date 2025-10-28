@@ -6,6 +6,9 @@ import {
   Text
 } from 'react-native';
 
+////////////////////////////////////////////////
+// Cookie popup
+////////////////////////////////////////////////
 export const CookieConsent: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
   const slideAnim = useState(new Animated.Value(-300))[0];
@@ -20,7 +23,6 @@ export const CookieConsent: React.FC = () => {
       }).start();
     }, 500);
 
-    // Auto-hide after 4 seconds
     const hideTimer = setTimeout(() => {
       Animated.timing(slideAnim, {
         toValue: -300,
@@ -41,11 +43,14 @@ export const CookieConsent: React.FC = () => {
 
   return (
     <Animated.View style={[styles.container, { transform: [{ translateX: slideAnim }] }]}>
-      <Text style={styles.text}>Hey there! We use cookies to make your visit awesome! 🍪</Text>
+      <Text style={styles.text}>Hey there! We use cookies to help make your visit awesome! 🍪</Text>
     </Animated.View>
   );
 };
 
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
