@@ -22,16 +22,12 @@ const SVG_WIDTH = 573;
 const SVG_HEIGHT = 748;
 
 const MapPage = () => {
+  //For map and sheet
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
   const screenHeight = Dimensions.get('window').height;
   const [sheetId, setSheetId] = useState<number | null>(1);
   const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
   const [isSheetVisible, setIsSheetVisible] = useState(false);
-
-  const [speaking, setSpeaking] = useState(false);
-  const synthRef = useRef(window.speechSynthesis);
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
-
   const pan = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
   const lastPan = useRef({ x: 0, y: 0 });
@@ -46,19 +42,22 @@ const MapPage = () => {
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
-  
-  // Image modal state
+
+  //For text-to-speech
+  const [speaking, setSpeaking] = useState(false);
+  const synthRef = useRef(window.speechSynthesis);
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  //For POI image
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string>('');
   const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
-  
-  // Cookie consent state
-  const [showCookieConsent, setShowCookieConsent] = useState(true);
-  
 
+  //For cookie consent message
+  const [showCookieConsent, setShowCookieConsent] = useState(true);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  
-  // Session tracking hook - returns updateActivity function
+
+  // For session tracking (analytics)
   const updateActivity = useSessionTracking('MapPage');
 
   const onMapLayout = (e: LayoutChangeEvent) => {
@@ -66,7 +65,7 @@ const MapPage = () => {
     setMapSize({ width, height });
   };
 
-  // for map zoom and pan
+  // For map zoom and pan
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
       return evt.nativeEvent.touches.length <= 2;
@@ -131,6 +130,7 @@ const MapPage = () => {
     },
   });
 
+  // For bottom swipe up sheet (POI info)
   const handlePanResponder = PanResponder.create({
     onStartShouldSetPanResponderCapture: (evt, gestureState) => {
       return isSheetVisible;
@@ -206,18 +206,15 @@ const MapPage = () => {
 
 
   const getPOIMapCoordinates = (poi: POI) => {
-    // Use coordinates directly from Firebase
     let x = poi.location.latitude;
     let y = poi.location.longitude;
     
-    // Convert to numbers if they're strings
     if (typeof x === 'string') x = parseFloat(x);
     if (typeof y === 'string') y = parseFloat(y);
     
-    // Ensure coordinates are valid numbers
     if (isNaN(x) || isNaN(y)) {
       console.warn(`Invalid coordinates for POI ${poi.id}: x=${poi.location.latitude}, y=${poi.location.longitude}`);
-      return { x: 0.5, y: 0.5 }; // Fallback to center
+      return { x: 0.5, y: 0.5 };
     }
     
     return { x, y };
@@ -378,6 +375,7 @@ const MapPage = () => {
     const textToSpeak = `${selectedMarker.title}. ${selectedMarker.blurb ? selectedMarker.blurb : ''
       }. ${selectedMarker.history ? `Historical Significance: ${selectedMarker.history}` : ''
       }.`.trim();
+
 
     if (speaking) {
       synth.cancel();
@@ -677,9 +675,8 @@ const MapPage = () => {
                 onError={(error: any) => console.error('POI Image Error:', error)}
               />
               
-              {/* Add inspect overlay */}
               <View style={styles.inspectOverlay}>
-                <Text style={styles.inspectText}>Tap to inspect</Text>
+                <Text style={styles.inspectText}>Tap to view</Text>
               </View>
             </TouchableOpacity>
             
@@ -778,7 +775,6 @@ const MapPage = () => {
         </Animated.View>
       )}
       
-      {/* Image Inspection Modal */}
       <ImageModal
         visible={imageModalVisible}
         imageUri={selectedImageUri}
@@ -793,8 +789,9 @@ const MapPage = () => {
   );
 };
 
-
+////////////////////////////////////////////////
 // Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -943,24 +940,6 @@ const styles = StyleSheet.create({
     elevation: 8,
     zIndex: 1000,
     overscrollBehavior: 'contain',
-  },
-  sheetBackgroundOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: Colours.white,
-    zIndex: 999, 
-  },
-  sheetHandle: { 
-    alignSelf: 'center', 
-    width: 50, 
-    height: 5, 
-    borderRadius: 3, 
-    backgroundColor: Colours.primaryColour, 
-    marginBottom: 16,
-    opacity: 0.6,
   },
   sheetTopBar: {
     flexDirection: 'row',
@@ -1205,23 +1184,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 12,
   },
-  navPill: {
-    backgroundColor: Colours.white,
-    borderWidth: 1,
-    borderColor: Colours.primaryColour,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    minWidth: 96,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colours.primaryColour,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   endTourPill: {
     backgroundColor: Colours.primaryColour,
     borderWidth: 1,
@@ -1246,25 +1208,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: Colours.white,
   },
-  pillGhost: { 
-    backgroundColor: Colours.surfaceColour,
-    borderWidth: 1,
-    borderColor: Colours.surfaceVariantColour,
-  },
   pillGhostText: { 
     color: Colours.primaryColour 
-  },
-  pillPrimary: { 
-    backgroundColor: Colours.primaryColour,
-    shadowColor: Colours.primaryColour,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  pillPrimaryText: { 
-    color: Colours.white,
-    fontWeight: '700',
   },
   bottomBanner: {
     position: 'absolute',
@@ -1345,12 +1290,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  navButtonText: {
-    color: Colours.primaryColour,
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'Inter-Bold',
   },
   endTourButton: {
     paddingHorizontal: 16,

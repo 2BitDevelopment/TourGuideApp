@@ -3,14 +3,16 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Colours } from '../constants/Colours';
 
+////////////////////////////////////////////////
+// Default Not Found Screen
+////////////////////////////////////////////////
 export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Page Not Found' }} />
       <View style={styles.container}>
-        <Text style={styles.title}>Oops!</Text>
         <Text style={styles.message}>
-          The page you’re looking for doesn’t exist or may have been moved.
+          The page you’re looking for doesn’t exist.
         </Text>
         <Link href="/" style={styles.link}>
           <View style={styles.button}>
@@ -22,6 +24,9 @@ export default function NotFoundScreen() {
   );
 }
 
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -29,13 +34,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: Colours.primaryColour,
-    marginBottom: 10,
-    letterSpacing: 0.5,
   },
   message: {
     fontSize: 16,

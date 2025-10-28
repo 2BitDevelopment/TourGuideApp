@@ -2,12 +2,12 @@ import { Colours } from '@/constants/Colours';
 import { usePathname } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    Platform,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View
+  Dimensions,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 
 interface OrientationLockProps {
@@ -19,29 +19,26 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
   const [wasLandscape, setWasLandscape] = useState(false);
   const pathname = usePathname();
 
-  //Detect if device is mobile vs desktop
+  
   const isMobileDevice = () => {
     if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      return true; // Native mobile apps are always mobile
+      return true;
     }
     
-    // For web check screen size and user agent
     if (Platform.OS === 'web') {
       const { width, height } = Dimensions.get('window');
-      const isSmallScreen = width < 768 || height < 768; // Tablet breakpoint
+      const isSmallScreen = width < 768 || height < 768;
       
-      //Check if its a touch device
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       
       return isSmallScreen || isTouchDevice;
     }
     
-    return false; // Default to desktop for other platforms
+    return false;
   };
 
   useEffect(() => {
     const updateOrientation = () => {
-      // Only apply orientation lock on mobile devices
       if (!isMobileDevice()) {
         setIsLandscape(false);
         return;
@@ -50,20 +47,15 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
       const { width, height } = Dimensions.get('window');
       const newIsLandscape = width > height;
       
-      // Track if we were in landscape and now back to portrait
       if (wasLandscape && !newIsLandscape) {
-        // We just returned from landscape to portrait
-        // The app should continue normally
       }
       
       setIsLandscape(newIsLandscape);
       setWasLandscape(newIsLandscape);
     };
 
-    // Check initial orientation
     updateOrientation();
 
-    // Listen for orientation changes
     const subscription = Dimensions.addEventListener('change', updateOrientation);
 
     return () => {
@@ -71,7 +63,6 @@ export const OrientationLock: React.FC<OrientationLockProps> = ({ children }) =>
     };
   }, [wasLandscape]);
 
-  // Only show orientation lock on mobile devices in landscape
   if (isMobileDevice() && isLandscape) {
     return (
       <View style={styles.container}>

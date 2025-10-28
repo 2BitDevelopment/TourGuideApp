@@ -1,17 +1,16 @@
 import { Colours } from '@/constants/Colours';
 import React, { useEffect, useState } from 'react';
 import {
-    Animated,
-    StyleSheet,
-    Text
+  Animated,
+  StyleSheet,
+  Text
 } from 'react-native';
 
 export const CookieConsent: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
-  const slideAnim = useState(new Animated.Value(-300))[0]; // Start off-screen to the left
+  const slideAnim = useState(new Animated.Value(-300))[0];
 
   useEffect(() => {
-    // Slide in from the left after a short delay
     const timer = setTimeout(() => {
       Animated.spring(slideAnim, {
         toValue: 0,
