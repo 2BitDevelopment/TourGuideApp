@@ -47,15 +47,10 @@ const MapPage = () => {
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
   
-  // Image modal state
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string>('');
   const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
-  
-  // Cookie consent state
   const [showCookieConsent, setShowCookieConsent] = useState(true);
-  
-
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   
   // Session tracking hook - returns updateActivity function
@@ -66,7 +61,7 @@ const MapPage = () => {
     setMapSize({ width, height });
   };
 
-  // for map zoom and pan
+  // Map pan and zoom gesture handling
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
       return evt.nativeEvent.touches.length <= 2;
@@ -131,12 +126,13 @@ const MapPage = () => {
     },
   });
 
+  // Sheet gesture handling for swipe up/down
   const handlePanResponder = PanResponder.create({
     onStartShouldSetPanResponderCapture: (evt, gestureState) => {
-      return isSheetVisible;
+      return isSheetVisible && sheetScrollY.current <= 0;
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 2;
+      return isSheetVisible && sheetScrollY.current <= 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 10;
     },
     onPanResponderMove: (evt, gestureState) => {
       if (isSheetVisible) {
@@ -157,15 +153,15 @@ const MapPage = () => {
     },
     onPanResponderRelease: (evt, gestureState) => {
       if (isSheetVisible) {
-        const threshold = screenHeight * 0.1;
-        if (gestureState.dy > threshold || gestureState.vy > 0.15) {
+        const threshold = screenHeight * 0.2;
+        if (gestureState.dy > threshold || gestureState.vy > 0.3) {
           hideSheet();
         } else {
           Animated.spring(sheetTranslateY, {
             toValue: 0,
             useNativeDriver: true,
-            tension: 120,
-            friction: 6,
+            tension: 10,
+            friction: 18,
           }).start();
         }
       } else {
@@ -178,6 +174,7 @@ const MapPage = () => {
     },
   });
 
+  // Show POI detail sheet
   const showSheet = () => {
 
     if (selectedMarker) {
@@ -192,6 +189,7 @@ const MapPage = () => {
     }).start();
   };
 
+  // Hide POI detail sheet
   const hideSheet = () => {
     Animated.timing(sheetTranslateY, {
       toValue: screenHeight,
@@ -205,25 +203,24 @@ const MapPage = () => {
   };
 
 
+  // Get POI coordinates from Firebase data
   const getPOIMapCoordinates = (poi: POI) => {
-    // Use coordinates directly from Firebase
     let x = poi.location.latitude;
     let y = poi.location.longitude;
     
-    // Convert to numbers if they're strings
     if (typeof x === 'string') x = parseFloat(x);
     if (typeof y === 'string') y = parseFloat(y);
     
-    // Ensure coordinates are valid numbers
     if (isNaN(x) || isNaN(y)) {
       console.warn(`Invalid coordinates for POI ${poi.id}: x=${poi.location.latitude}, y=${poi.location.longitude}`);
-      return { x: 0.5, y: 0.5 }; // Fallback to center
+      return { x: 0.5, y: 0.5 };
     }
     
     return { x, y };
   };
 
 
+  // Load POI data from Firebase
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
 
@@ -243,7 +240,7 @@ const MapPage = () => {
     }
   };
 
-  // Convert database POIs to map markers
+  // Convert database POIs to map markers with SVG coordinate transformation
   const databaseMarkers = useMemo(() => {
     const scale = Math.min(mapSize.width / SVG_WIDTH, mapSize.height / SVG_HEIGHT);
     const offsetX = (mapSize.width - SVG_WIDTH * scale) / 2;
@@ -252,7 +249,7 @@ const MapPage = () => {
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
 
     return sortedPOIs.map((poi, index) => {
-      const coords = getPOIMapCoordinates(poi); // Pass the POI object instead of just ID
+      const coords = getPOIMapCoordinates(poi);
       const imageUrl = imageUrls.get(poi.imageID);
 
       const svgX = coords.x * SVG_WIDTH;
@@ -354,6 +351,7 @@ const MapPage = () => {
     };
   }, []);
 
+  // Loading screen component
   const LoadingScreen = () => (
     <View style={styles.loadingContainer}>
       <Text style={styles.loadingTitle}>St. George's Cathedral</Text>
@@ -412,7 +410,7 @@ const MapPage = () => {
 
   return (
     <OrientationLock>
-      <View style={styles.container}>
+      <View style={styles.container} {...handlePanResponder.panHandlers}>
       <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
         <TouchableOpacity style={styles.backButton}
           onPress={() => {
@@ -480,12 +478,9 @@ const MapPage = () => {
                 backgroundColor: Colours.primaryColour
               }]}
               onPress={() => {
-                // Update activity and track POI click analytics
                 updateActivity();
                 Analytics.trackPOIClick(m.originalId || m.id, m.title);
-
                 setSheetId(m.id);
-                // Do not auto open the sheet, it opens only on swipe up
               }}
             >
               <Text style={styles.pinText}>{m.id}</Text>
@@ -499,12 +494,43 @@ const MapPage = () => {
       <View style={styles.bottomBanner}>
         <View
           style={styles.bannerTopBar}
-          {...handlePanResponder.panHandlers}
           hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
+          {...PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => {
+              return Math.abs(gestureState.dy) > 5;
+            },
+            onPanResponderGrant: () => {
+              updateActivity();
+            },
+            onPanResponderMove: (_, gestureState) => {
+              // If swiping up negative dy, move the sheet
+              if (gestureState.dy < -20) {
+                setIsSheetVisible(true);
+                Animated.spring(sheetTranslateY, {
+                  toValue: 0,
+                  useNativeDriver: true,
+                  tension: 80,
+                  friction: 12,
+                }).start();
+                
+                if (selectedMarker) {
+                  updateActivity();
+                }
+              }
+            },
+            onPanResponderRelease: () => {
+             
+            },
+          }).panHandlers}
         >
-          <View style={{ width: 48 }} />
-          <View style={styles.bannerHandle} />
-          <View style={{ width: 48 }} />
+          
+            <View style={{ width: 48 }} />
+            <TouchableOpacity 
+              style={styles.bannerHandle}
+              activeOpacity={0.7}
+            />
+            <View style={{ width: 48 }} />
         </View>
         <View style={styles.bannerContent}>
           {selectedMarker && (
@@ -527,19 +553,49 @@ const MapPage = () => {
                 <View style={{ width: 44 }} />
               )}
 
-              <View style={styles.bannerCenter}>
-                <View style={styles.bannerIndex}>
-                  <Text style={styles.bannerIndexText}>{selectedMarker.id}</Text>
-                </View>
-                <Text style={styles.bannerTitle}>{selectedMarker.title}</Text>
-              </View>
+                <TouchableOpacity 
+                  style={styles.bannerCenter}
+                  activeOpacity={0.7}
+                  {...PanResponder.create({
+                    onStartShouldSetPanResponder: () => true,
+                    onMoveShouldSetPanResponder: (_, gestureState) => {
+                      return Math.abs(gestureState.dy) > 5;
+                    },
+                    onPanResponderGrant: () => {
+                      updateActivity();
+                    },
+                    onPanResponderMove: (_, gestureState) => {
+                      // If swiping up ,negative dy, move the sheet
+                      if (gestureState.dy < -20) {
+                        setIsSheetVisible(true);
+                        Animated.spring(sheetTranslateY, {
+                          toValue: 0,
+                          useNativeDriver: true,
+                          tension: 80,
+                          friction: 12,
+                        }).start();
+                        
+                        if (selectedMarker) {
+                          updateActivity();
+                        }
+                      }
+                    },
+                    onPanResponderRelease: () => {
+                      
+                    },
+                  }).panHandlers}
+                >
+                  <View style={styles.bannerIndex}>
+                    <Text style={styles.bannerIndexText}>{selectedMarker.id}</Text>
+                  </View>
+                  <Text style={styles.bannerTitle}>{selectedMarker.title}</Text>
+                </TouchableOpacity>
 
               {selectedMarker.id === 26 ? (
                 <TouchableOpacity 
                   style={styles.endTourButton}
                   onPress={() => {
                     updateActivity();
-                    // Navigate to Thank You page
                     window.location.href = '/ThankYou';
                   }}
                 >
@@ -575,12 +631,14 @@ const MapPage = () => {
                   updateActivity();
                 },
                 onPanResponderMove: (_, gestureState) => {
-                  // If swiping up (negative dy), move the sheet
+                  // If swiping up ,negative dy, move the sheet
                   if (gestureState.dy < -20) {
                     setIsSheetVisible(true);
                     Animated.spring(sheetTranslateY, {
                       toValue: 0,
                       useNativeDriver: true,
+                      tension: 10,
+                      friction: 18,
                     }).start();
                     
                     if (selectedMarker) {
@@ -589,7 +647,7 @@ const MapPage = () => {
                   }
                 },
                 onPanResponderRelease: () => {
-                  // Handle tap if no significant movement
+               
                 },
               }).panHandlers}
             >
@@ -611,7 +669,6 @@ const MapPage = () => {
         >
           <View
             style={styles.sheetTopBar}
-            {...handlePanResponder.panHandlers}
             hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
           >
             <TouchableOpacity
@@ -876,11 +933,10 @@ const styles = StyleSheet.create({
     color: Colours.primaryColour,
     fontSize: 24,
     fontWeight: '800',
-    textAlign: 'left',
+    textAlign: 'center',
     fontFamily: 'PlayfairDisplay-Bold',
     letterSpacing: 0.5,
     flex: 1,
-    paddingLeft: 45,
   },
   mapArea: {
     flex: 1,
