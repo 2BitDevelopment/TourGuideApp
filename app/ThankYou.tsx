@@ -4,6 +4,9 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+////////////////////////////////////////////////
+// Thank you Page Layout
+////////////////////////////////////////////////
 const ThankYou = () => {
   return (
     <View style={styles.container}>

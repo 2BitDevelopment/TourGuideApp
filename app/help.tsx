@@ -5,6 +5,9 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { POIImage } from '../components/POIImage';
 
+////////////////////////////////////////////////
+// Help Page
+////////////////////////////////////////////////
 const HelpPage = () => {
   return (
     <View style={styles.container}>
@@ -29,7 +32,6 @@ const HelpPage = () => {
           />
         </View>
 
-        {/* Instructions List */}
         <View style={styles.instructionsContainer}>
           <View style={styles.instructionItem}>
             <View style={styles.instructionNumber}>
@@ -87,6 +89,10 @@ const HelpPage = () => {
   );
 };
 
+
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,

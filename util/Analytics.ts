@@ -21,10 +21,9 @@ export class Analytics {
   private static lastActivityTime: number = Date.now();
 
 
-
-  /**
-   * Track when a user clicks/taps on a POI marker
-   */
+////////////////////////////////////////////////
+// Track when a user clicks/taps on a POI marker
+////////////////////////////////////////////////
   static async trackPOIClick(poiId: number, poiTitle: string): Promise<void> {
     try {
       Analytics.updateActivity();
@@ -45,10 +44,9 @@ export class Analytics {
   }
 
 
-
-  /**
-   * Track general page views for the website
-   */
+////////////////////////////////////////////////
+// Track general page views for the website
+////////////////////////////////////////////////
   static async trackPageView(pageName: string): Promise<void> {
     try {
       Analytics.updateActivity();
@@ -67,17 +65,17 @@ export class Analytics {
   }
 
 
-
-  /**
-   * Get current session ID
-   */
+////////////////////////////////////////////////
+// Get current session ID
+////////////////////////////////////////////////
   static getSessionId(): string {
     return Analytics.sessionId;
   }
 
-  /**
-   * Generate a new session ID (useful for new app launches)
-   */
+  
+////////////////////////////////////////////////
+// Generate a new session ID (useful for new app launches)
+////////////////////////////////////////////////
   static renewSession(): string {
     Analytics.sessionId = Math.random().toString(36).substring(2, 15);
     Analytics.sessionStartTime = Date.now();
@@ -85,23 +83,26 @@ export class Analytics {
     return Analytics.sessionId;
   }
 
-  /**
-   * Update the last activity time (call this on user interactions)
-   */
+  
+////////////////////////////////////////////////
+// Update the last activity time (call this on user interactions)
+////////////////////////////////////////////////
   static updateActivity = (): void => {
     Analytics.lastActivityTime = Date.now();
   }
 
-  /**
-   * Get current session duration in minutes
-   */
+  
+////////////////////////////////////////////////
+// Get current session duration in minutes
+////////////////////////////////////////////////
   static getSessionDuration(): number {
     return Math.floor((Analytics.lastActivityTime - Analytics.sessionStartTime) / (1000 * 60));
   }
 
-  /**
-   * Track session duration when user leaves or app closes
-   */
+  
+////////////////////////////////////////////////
+// Track session duration when user leaves or app closes
+////////////////////////////////////////////////
   static async trackSessionDuration(): Promise<void> {
     try {
       const durationMinutes = Analytics.getSessionDuration();
@@ -122,9 +123,10 @@ export class Analytics {
     }
   }
 
-  /**
-   * Get session duration category for analytics
-   */
+  
+////////////////////////////////////////////////
+// Get session duration category for analytics
+////////////////////////////////////////////////
   static getSessionDurationCategory(): string {
     const duration = Analytics.getSessionDuration();
     if (duration < 10) return 'short'; // Under 10 minutes
