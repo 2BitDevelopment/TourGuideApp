@@ -1,5 +1,5 @@
-#Developed by:
-[![2BIT Development](readme_media/logo.png)
+
+[2BIT Development](readme_media/logo.png)
 
 # St. George's Cathedral Tour Guide App
 
