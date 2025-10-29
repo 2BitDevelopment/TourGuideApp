@@ -58,11 +58,19 @@ const MapPage = () => {
   const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
 
   //For cookie consent message
-  const [showCookieConsent, setShowCookieConsent] = useState(true);
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // For session tracking (analytics)
   const updateActivity = useSessionTracking('MapPage');
+
+  // Check if user has seen cookie consent in this session
+  useEffect(() => {
+    if (!Analytics.hasSeenCookieConsent()) {
+      setShowCookieConsent(true);
+      Analytics.markCookieConsentSeen();
+    }
+  }, []);
 
   const onMapLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -824,7 +832,7 @@ const MapPage = () => {
         />
 
         {/* Cookie Consent Banner */}
-        {showCookieConsent && <CookieConsent />}
+        <CookieConsent show={showCookieConsent} />
       </View>
     </OrientationLock>
   );

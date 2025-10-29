@@ -133,4 +133,22 @@ export class Analytics {
     if (duration < 20) return 'medium'; // 10-20 minutes
     return 'long'; // 20+ minutes
   }
+
+  
+////////////////////////////////////////////////
+// Check if user has seen cookie consent in this session
+////////////////////////////////////////////////
+  static hasSeenCookieConsent(): boolean {
+    const sessionId = Analytics.getSessionId();
+    return sessionStorage.getItem(`cookieConsent_${sessionId}`) === 'true';
+  }
+
+  
+////////////////////////////////////////////////
+// Mark that user has seen cookie consent in this session
+////////////////////////////////////////////////
+  static markCookieConsentSeen(): void {
+    const sessionId = Analytics.getSessionId();
+    sessionStorage.setItem(`cookieConsent_${sessionId}`, 'true');
+  }
 }

@@ -9,11 +9,23 @@ import {
 ////////////////////////////////////////////////
 // Cookie popup
 ////////////////////////////////////////////////
-export const CookieConsent: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(true);
+interface CookieConsentProps {
+  show: boolean;
+}
+
+export const CookieConsent: React.FC<CookieConsentProps> = ({ show }) => {
+  const [isVisible, setIsVisible] = useState(false);
   const slideAnim = useState(new Animated.Value(-300))[0];
 
   useEffect(() => {
+    if (show) {
+      setIsVisible(true);
+    }
+  }, [show]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
     const timer = setTimeout(() => {
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -37,7 +49,7 @@ export const CookieConsent: React.FC = () => {
       clearTimeout(timer);
       clearTimeout(hideTimer);
     };
-  }, [slideAnim]);
+  }, [isVisible, slideAnim]);
 
   if (!isVisible) return null;
 
