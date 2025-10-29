@@ -1,5 +1,5 @@
 
-[![2BIT Development](readme_media/logo.png)]
+![2BIT Development](readme_media/logo.png)  **X** ![ST. George' cathedral](readme_media/cathedral_logo.png)
 
 # St. George's Cathedral Tour Guide App
 
