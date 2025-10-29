@@ -1,3 +1,6 @@
+#Developed by:
+[![2BIT Development](readme_media/logo.png)
+
 # St. George's Cathedral Tour Guide App
 
 A React Native/Expo mobile Web app providing an interactive virtual tour experience for St. George's Cathedral in Cape Town, featuring an SVG based indoor map, Firebase backend, and POI system.
