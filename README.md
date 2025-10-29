@@ -1,26 +1,266 @@
 # St. George's Cathedral Tour Guide App
 
-A React Native/Expo mobile app providing an interactive virtual tour experience for St. George's Cathedral in Cape Town, featuring an SVG-based indoor map, Firebase backend, and POI (Point of Interest) system.
+A React Native/Expo mobile Web app providing an interactive virtual tour experience for St. George's Cathedral in Cape Town, featuring an SVG based indoor map, Firebase backend, and POI system.
 
-## Quick Start
+[![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-1C1E24?style=for-the-badge&logo=expo&logoColor=#D04A37)](https://expo.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-039BE5?style=for-the-badge&logo=Firebase&logoColor=white)](https://firebase.google.com/)
 
-### Development
+## Table of Contents
+
+- [About The Project](#about-the-project)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Usage](#usage)
+- [Deployment](#deployment)
+- [Team](#team)
+
+
+## About The Project
+
+The St. George's Cathedral Tour Guide Web App is an interactive digital tour guide that allows visitors to explore the historic cathedral through a detailed SVG based floorplan. The app features 26 Points of Interest with historical information, high quality images, audio guides and responsive design that works seamlessly across mobile and desktop devices.
+
+### Key Features
+
+- **Interactive Floorplan**: SVG-based cathedral floorplan with 26 POI markers
+- **Responsive Design**: Works seamlessly on mobile, tablet, and desktop
+- **Image Gallery**: High quality images with full screen viewing
+- **Audio Guide**: Text to speech audio descriptions
+- **Privacy Compliant**: Cookie consent and analytics tracking
+- **Mobile Optimized**: Portrait orientation lock and touch gestures
+- **Modern UI**:  Consistent color scheme and smooth animations
+
+## Tech Stack
+
+### Frontend
+- **React Native** - Cross platform mobile development
+- **Expo** - Development platform and tools
+- **TypeScript** - Type-safe JavaScript
+- **React Navigation** - Navigation library
+- **React Native SVG** - SVG rendering
+
+### Backend & Services
+- **Firebase Firestore** - NoSQL database
+- **Firebase Storage** - Image storage
+- **Firebase Cloud Functions** - Serverless functions
+- **Firebase Analytics** - User analytics
+
+### Development Tools
+- **ESLint** - Code linting
+
+## Getting Started
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** (v16 or higher) - [Download Node.js](https://nodejs.org/)
+- **npm** (comes with Node.js) or **yarn** package manager
+- **Git** - [Download Git](https://git-scm.com/)
+- **Modern web browser** (Chrome, Firefox, Safari, or Edge)
+- **Internet connection** for downloading dependencies and Firebase services
+- **Firebase CLI** (for deployment) - Install with `npm install -g firebase-tools`
+
+### Installation
+
+#### Step 1: Clone the Repository
+
+Clone the repository to your local machine:
+
 ```bash
-npm install
-expo start --dev-client  # For development builds
-expo start --web         # For web testing
+git clone https://github.com/2BitDevelopment/TourGuideApp.git
+cd TourGuideApp
 ```
 
-### Deployment
+#### Step 2: Install Dependencies
 
-#### Web Hosting
+Install all required dependencies:
+
+```bash
+npm install
+```
+
+This will install:
+- React Native and Expo dependencies
+- TypeScript and type definitions
+- Firebase SDK
+- React Navigation
+- All other project dependencies
+
+**Expected Output:**
+```
+Installed all dependencies
+```
+
+#### Step 3: Firebase Configuration
+
+Set up your Firebase configuration file:
+
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Enable Firestore Database and Firebase Storage
+3. Add your Firebase configuration to `services/firebase.config.ts`:
+
+```typescript
+const firebaseConfig = {
+  apiKey: "your-api-key",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "your-sender-id",
+  appId: "your-app-id"
+};
+```
+
+#### Step 4: Install Firebase Functions Dependencies (Optional)
+
+If you plan to deploy Firebase Functions:
+
+```bash
+cd functions
+npm install
+cd ..
+```
+
+### Running the Application
+
+#### For Web Development
+
+Start the development server for web:
+
+```bash
+npm start
+```
+
+Then:
+- Press `w` to open in web browser
+- Or visit `http://localhost:8081` in your browser
+
+**For production web build:**
+```bash
+npm run build
+```
+
+#### Development Commands
+
+- `npm start` - Start Expo development server
+- `npm run web` - Start web development server
+- `npm run lint` - Run ESLint to check code quality
+- `npm run predeploy` - Build production web version
+- `npm run deploy-hosting` - Deploy to Firebase Hosting
+
+### Troubleshooting
+
+#### Common Issues
+
+**Issue: "Module not found" error**
+```bash
+# Clear npm cache and reinstall
+rm -rf node_modules
+npm cache clean --force
+npm install
+```
+
+**Issue: Expo CLI not found**
+```bash
+# Install Expo CLI globally
+npm install -g expo-cli
+```
+
+**Issue: Firestore permissions error**
+- Go to Firebase Console -> Firestore Database -> Rules
+- Update rules to allow read/write during development
+- For production, use proper authentication rules
+
+**Issue: Images not loading**
+- Verify Firebase Storage is enabled in your Firebase project
+- Check that image URLs in Firestore are correct
+- Ensure Firebase configuration in `services/firebase.config.ts` is correct
+
+**Issue: Port already in use**
+```bash
+# Kill the process using the port
+npx kill-port 8081
+# Or specify a different port
+expo start --port 8082
+```
+
+#### Environment Variables
+
+Create a `.env` file in the root directory (if needed):
+
+```env
+EXPO_PUBLIC_FIREBASE_API_KEY=your-api-key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+```
+
+### Required Firebase Services
+
+Ensure these Firebase services are enabled in your Firebase Console:
+
+1. **Firestore Database** (for storing POI data)
+   - Go to Firestore Database -> Create database
+   - Choose production or test mode (test mode for development)
+   - Set location (choose closest to your users)
+
+2. **Firebase Storage** (for storing images)
+   - Go to Storage -> Get started
+   - Accept security rules
+
+3. **Firebase Hosting** (for deployment)
+   - Go to Hosting -> Get started
+   - Follow setup instructions
+
+4. **Firebase Analytics** (optional)
+   - Automatically enabled
+   - Used for tracking user behavior
+
+## Project Structure
+
+will add screenshot
+
+
+## Usage
+
+### For Developers
+
+#### Starting Development
+
+1. Clone the repository and install dependencies (see Installation section)
+2. Configure Firebase -> Set up Firebase project and add credentials to `services/firebase.config.ts`
+3. Start development server -> Run `npm start` or `npm run web`
+4. Make changes -> Edit files in `app/` or `components/` directories
+5. See changes instantly -> Hot reloading will update the app automatically
+
+#### Development Workflow
+
+- Main files: `app/MapPage.tsx` (main interface), `app/index.tsx` (home page)
+- Components: Add reusable components in `components/` directory
+- Styling: Use `constants/Colours.ts` for consistent colors across the app
+- Database: POI data stored in Firestore, structure defined in `types/database.ts`
+- Images: Stored in Firebase Storage, cached locally using `hooks/useImageLoading.ts`
+
+#### Code Structure
+
+- App pages: Located in `app/` directory, using file-based routing
+- Reusable components: Located in `components/` directory
+- Custom hooks: Located in `hooks/` directory for shared logic
+- Services: Located in `services/` for external API integration
+- Utilities: Located in `util/` for helper functions
+- Constants: Located in `constants/` for shared values
+
+## Deployment
+
+### Web Hosting
 Deploy the web version to Firebase Hosting:
 ```bash
 npm run predeploy        # Exports web build
 npm run deploy-hosting   # Deploys to Firebase Hosting
 ```
 
-#### Firebase Functions
+### Firebase Functions
 Deploy backend functions:
 ```bash
 cd functions
@@ -29,277 +269,33 @@ npm run build
 firebase deploy --only functions
 ```
 
----
+## Team
 
+**Built by 2Bit Development**
 
+### Team Members & Contributions
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![Unlicense License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+- **James Hart** - Backend Lead & Project Manager
+  - Firebase backend architecture and implementation
+  - Project coordination and technical leadership
+  - Database design and API development
 
+- **Emil Fabel** - Frontend Lead & Design
+  - React Native app architecture and development
+  - UI/UX design and user experience
+  - Interactive map implementation and POI system
 
+- **Weylin Volschenk** - Frontend co-lead & Planning
+  - Frontend development and optimization
+  - Feature planning and implementation assistance
+  - Code review and quality assurance
 
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
+- **Kevin Muller** - Security & DevSecOps
+  - Security implementation and best practices
+  - DevOps pipeline and deployment automation
+  - Infrastructure security and monitoring
 
-  <h3 align="center">Best-README-Template</h3>
+**Built with love by 2Bit Development for St. George's Cathedral**
 
-  <p align="center">
-    An awesome README template to jumpstart your projects!
-    <br />
-    <a href="https://github.com/othneildrew/Best-README-Template"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/othneildrew/Best-README-Template">View Demo</a>
-    &middot;
-    <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
-    &middot;
-    <a href="https://github.com/othneildrew/Best-README-Template/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
-  </p>
-</div>
-
-
-
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
-
-
-
-<!-- ABOUT THE PROJECT -->
-## About The Project
-
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
-
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
-
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
-
-Use the `BLANK_README.md` to get started.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-### Built With
-
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
-
-### Installation
-
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/github_username/repo_name.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-5. Change git remote url to avoid accidental pushes to base project
-   ```sh
-   git remote set-url origin github_username/repo_name
-   git remote -v # confirm the changes
-   ```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Top contributors:
-
-<a href="https://github.com/othneildrew/Best-README-Template/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=othneildrew/Best-README-Template" alt="contrib.rocks image" />
-</a>
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the Unlicense License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTACT -->
-## Contact
-
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
-
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
-
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-* [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-* [Malven's Grid Cheatsheet](https://grid.malven.co/)
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
-* [Font Awesome](https://fontawesome.com)
-* [React Icons](https://react-icons.github.io/react-icons/search)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
-[stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/othneildrew/Best-README-Template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
-[product-screenshot]: images/screenshot.png
-[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
-[Next-url]: https://nextjs.org/
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[Vue.js]: https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D
-[Vue-url]: https://vuejs.org/
-[Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
-[Angular-url]: https://angular.io/
-[Svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
-[Svelte-url]: https://svelte.dev/
-[Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
-[Laravel-url]: https://laravel.com
-[Bootstrap.com]: https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white
-[Bootstrap-url]: https://getbootstrap.com
-[JQuery.com]: https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white
-[JQuery-url]: https://jquery.com 
-
+*Last updated: October 2025*
+*Version: 1.0.0*

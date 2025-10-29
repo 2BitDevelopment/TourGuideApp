@@ -4,6 +4,9 @@ import { Link } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+////////////////////////////////////////////////
+// Thank you Page Layout
+////////////////////////////////////////////////
 const ThankYou = () => {
   return (
     <View style={styles.container}>
@@ -68,8 +71,8 @@ const styles = StyleSheet.create({
     minHeight: 400,
     backgroundColor: Colours.white,
     borderRadius: 20,
-    padding: 30,
-    marginHorizontal: 20,
+    padding: 20,
+    marginHorizontal: 10,
     marginVertical: 15,
     shadowColor: Colours.black,
     shadowOffset: { width: 0, height: 4 },

@@ -1,15 +1,15 @@
 import { Colours } from '@/constants/Colours';
 import React from 'react';
 import {
-    Dimensions,
-    Image,
-    Modal,
-    SafeAreaView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  Modal,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface ImageModalProps {
@@ -19,6 +19,9 @@ interface ImageModalProps {
   onClose: () => void;
 }
 
+////////////////////////////////////////////////
+// Image popup
+////////////////////////////////////////////////
 export const ImageModal: React.FC<ImageModalProps> = ({
   visible,
   imageUri,
@@ -27,6 +30,9 @@ export const ImageModal: React.FC<ImageModalProps> = ({
 }) => {
   if (!visible || !imageUri) return null;
 
+////////////////////////////////////////////////
+// Modal Layout
+////////////////////////////////////////////////
   return (
     <Modal
       visible={visible}
@@ -38,17 +44,15 @@ export const ImageModal: React.FC<ImageModalProps> = ({
       <StatusBar backgroundColor={Colours.black} barStyle="light-content" />
       <SafeAreaView style={styles.container}>
         <View style={styles.overlay}>
-          {/* Close Button */}
+          
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
 
-          {/* Title */}
           {title && (
             <Text style={styles.title}>{title}</Text>
           )}
 
-          {/* Image */}
           <Image
             source={{ uri: imageUri }}
             style={styles.image}
@@ -62,6 +66,9 @@ export const ImageModal: React.FC<ImageModalProps> = ({
 
 const { width, height } = Dimensions.get('window');
 
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -5,6 +5,9 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { POIImage } from '../components/POIImage';
 
+////////////////////////////////////////////////
+// Help Page
+////////////////////////////////////////////////
 const HelpPage = () => {
   return (
     <View style={styles.container}>
@@ -29,7 +32,6 @@ const HelpPage = () => {
           />
         </View>
 
-        {/* Instructions List */}
         <View style={styles.instructionsContainer}>
           <View style={styles.instructionItem}>
             <View style={styles.instructionNumber}>
@@ -66,6 +68,15 @@ const HelpPage = () => {
               Click on the Play Button to have a Voice read out the description
             </Text>
           </View>
+
+        <View style={styles.instructionItem}>
+            <View style={styles.instructionNumber}>
+              <Text style={styles.numberText}>5</Text>
+            </View>
+            <Text style={styles.instructionText}>
+              If the Floorplan has disappeared, refresh the page
+            </Text>
+          </View>
         </View>
 
         <View style={styles.churchFooter}>
@@ -78,6 +89,10 @@ const HelpPage = () => {
   );
 };
 
+
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -17,9 +17,9 @@ interface POIImageProps {
   resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center';
 }
 
-/**
- * Component for displaying POI images with loading states, error handling, and fallbacks
- */
+////////////////////////////////////////////////
+// Image component with loading state and error handling
+////////////////////////////////////////////////
 export const POIImage: React.FC<POIImageProps> = ({
   imageID,
   style,
@@ -90,30 +90,9 @@ export const POIImage: React.FC<POIImageProps> = ({
   );
 };
 
-/**
- * Compact version of POI image for list items or thumbnails
- */
-export const POIImageThumbnail: React.FC<POIImageProps & { size?: number }> = ({
-  size = 60,
-  ...props
-}) => {
-  const thumbnailStyle: ImageStyle = {
-    width: size,
-    height: size,
-    borderRadius: size / 8,
-  };
-
-  return (
-    <POIImage
-      {...props}
-      style={StyleSheet.flatten([thumbnailStyle, props.style])}
-      showLoadingIndicator={false}
-      showRetryButton={false}
-      resizeMode="cover"
-    />
-  );
-};
-
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colours.white,

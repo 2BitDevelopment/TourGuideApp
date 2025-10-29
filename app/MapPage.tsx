@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Asset } from 'expo-asset';
 import { Link } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, BackHandler, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, LayoutChangeEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import { CookieConsent } from '../components/CookieConsent';
 import { ImageModal } from '../components/ImageModal';
@@ -21,17 +21,17 @@ const floorplanAsset = Asset.fromModule(require('../assets/images/cathedral-floo
 const SVG_WIDTH = 573;
 const SVG_HEIGHT = 748;
 
+////////////////////////////////////////////////
+// Map Page
+////////////////////////////////////////////////
 const MapPage = () => {
+
+  //For map and sheet
   const [mapSize, setMapSize] = useState<{ width: number; height: number }>({ width: 1, height: 1 });
   const screenHeight = Dimensions.get('window').height;
   const [sheetId, setSheetId] = useState<number | null>(1);
   const sheetTranslateY = useRef(new Animated.Value(screenHeight)).current;
   const [isSheetVisible, setIsSheetVisible] = useState(false);
-
-  const [speaking, setSpeaking] = useState(false);
-  const synthRef = useRef(window.speechSynthesis);
-  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
-
   const pan = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
   const lastPan = useRef({ x: 0, y: 0 });
@@ -46,27 +46,38 @@ const MapPage = () => {
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
-  
-  // Image modal state
+
+  //For text-to-speech
+  const [speaking, setSpeaking] = useState(false);
+  const synthRef = useRef(window.speechSynthesis);
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  //For POI image
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImageUri, setSelectedImageUri] = useState<string>('');
   const [selectedImageTitle, setSelectedImageTitle] = useState<string>('');
-  
-  // Cookie consent state
-  const [showCookieConsent, setShowCookieConsent] = useState(true);
-  
 
+  //For cookie consent message
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  
-  // Session tracking hook - returns updateActivity function
+
+  // For session tracking (analytics)
   const updateActivity = useSessionTracking('MapPage');
+
+  // Check if user has seen cookie consent in this session
+  useEffect(() => {
+    if (!Analytics.hasSeenCookieConsent()) {
+      setShowCookieConsent(true);
+      Analytics.markCookieConsentSeen();
+    }
+  }, []);
 
   const onMapLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setMapSize({ width, height });
   };
 
-  // for map zoom and pan
+  // For map zoom and pan
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
       return evt.nativeEvent.touches.length <= 2;
@@ -131,12 +142,13 @@ const MapPage = () => {
     },
   });
 
+  // For bottom swipe up sheet (POI info)
   const handlePanResponder = PanResponder.create({
     onStartShouldSetPanResponderCapture: (evt, gestureState) => {
-      return isSheetVisible;
+      return isSheetVisible && sheetScrollY.current <= 0;
     },
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 2;
+      return isSheetVisible && sheetScrollY.current <= 0 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 10;
     },
     onPanResponderMove: (evt, gestureState) => {
       if (isSheetVisible) {
@@ -157,15 +169,15 @@ const MapPage = () => {
     },
     onPanResponderRelease: (evt, gestureState) => {
       if (isSheetVisible) {
-        const threshold = screenHeight * 0.1;
-        if (gestureState.dy > threshold || gestureState.vy > 0.15) {
+        const threshold = screenHeight * 0.2;
+        if (gestureState.dy > threshold || gestureState.vy > 0.3) {
           hideSheet();
         } else {
           Animated.spring(sheetTranslateY, {
             toValue: 0,
             useNativeDriver: true,
-            tension: 120,
-            friction: 6,
+            tension: 10,
+            friction: 18,
           }).start();
         }
       } else {
@@ -178,6 +190,7 @@ const MapPage = () => {
     },
   });
 
+  // Show POI info sheet
   const showSheet = () => {
 
     if (selectedMarker) {
@@ -192,6 +205,7 @@ const MapPage = () => {
     }).start();
   };
 
+  // Hide POI info sheet
   const hideSheet = () => {
     Animated.timing(sheetTranslateY, {
       toValue: screenHeight,
@@ -205,32 +219,30 @@ const MapPage = () => {
   };
 
 
+  // Get POI coordinates from database
   const getPOIMapCoordinates = (poi: POI) => {
-    // Use coordinates directly from Firebase
     let x = poi.location.latitude;
     let y = poi.location.longitude;
-    
-    // Convert to numbers if they're strings
+
     if (typeof x === 'string') x = parseFloat(x);
     if (typeof y === 'string') y = parseFloat(y);
-    
-    // Ensure coordinates are valid numbers
+
     if (isNaN(x) || isNaN(y)) {
       console.warn(`Invalid coordinates for POI ${poi.id}: x=${poi.location.latitude}, y=${poi.location.longitude}`);
-      return { x: 0.5, y: 0.5 }; // Fallback to center
+      return { x: 0.5, y: 0.5 };
     }
-    
+
     return { x, y };
   };
 
-
+  // Load POI data from database
   const loadPOIsFromDatabase = async () => {
     if (loadingPOIs) return;
 
     setLoadingPOIs(true);
     try {
       const pois = await DatabaseApi.getAllPOIs();
-      
+
       setDbPOIs(pois);
     } catch (error) {
       console.error('Failed to load POIs:', error);
@@ -252,7 +264,7 @@ const MapPage = () => {
     const sortedPOIs = [...dbPOIs].sort((a, b) => a.id - b.id);
 
     return sortedPOIs.map((poi, index) => {
-      const coords = getPOIMapCoordinates(poi); // Pass the POI object instead of just ID
+      const coords = getPOIMapCoordinates(poi);
       const imageUrl = imageUrls.get(poi.imageID);
 
       const svgX = coords.x * SVG_WIDTH;
@@ -276,11 +288,8 @@ const MapPage = () => {
     });
   }, [dbPOIs, imageUrls, mapSize]);
 
-  const allMarkers = useMemo(() => {
-    return databaseMarkers;
-  }, [databaseMarkers]);
-
-  const selectedMarker = useMemo(() => allMarkers.find(m => m.id === sheetId) ?? null, [sheetId, allMarkers]);
+  // Current marker
+  const selectedMarker = useMemo(() => databaseMarkers.find(m => m.id === sheetId) ?? null, [sheetId, databaseMarkers]);
 
   useEffect(() => {
     loadPOIsFromDatabase();
@@ -291,7 +300,6 @@ const MapPage = () => {
       preloadPOIImages(dbPOIs);
     }
   }, [dbPOIs, preloadPOIImages]);
-
 
   useEffect(() => {
     const checkDataLoaded = () => {
@@ -305,21 +313,6 @@ const MapPage = () => {
 
     checkDataLoaded();
   }, [dbPOIs, isLoadingImages, loadingPOIs, imageUrls]);
-
-  // Handle Android back button to close sheet
-  useEffect(() => {
-    const backAction = () => {
-      if (isSheetVisible) {
-        setIsSheetVisible(false);
-        return true; 
-      }
-      return false; 
-    };
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-
-    return () => backHandler.remove();
-  }, [isSheetVisible]);
 
   useEffect(() => {
     let isMounted = true;
@@ -354,13 +347,14 @@ const MapPage = () => {
     };
   }, []);
 
+  // For loading screen when map loads
   const LoadingScreen = () => (
     <View style={styles.loadingContainer}>
       <Text style={styles.loadingTitle}>St. George's Cathedral</Text>
       <Text style={styles.loadingSubtitle}>Loading your virtual tour...</Text>
-      <ActivityIndicator 
-        size="large" 
-        color={Colours.primaryColour} 
+      <ActivityIndicator
+        size="large"
+        color={Colours.primaryColour}
         style={styles.loadingSpinner}
       />
       <Text style={styles.loadingText}>Preparing points of interest</Text>
@@ -378,6 +372,7 @@ const MapPage = () => {
     const textToSpeak = `${selectedMarker.title}. ${selectedMarker.blurb ? selectedMarker.blurb : ''
       }. ${selectedMarker.history ? `Historical Significance: ${selectedMarker.history}` : ''
       }.`.trim();
+
 
     if (speaking) {
       synth.cancel();
@@ -408,393 +403,444 @@ const MapPage = () => {
     synth.speak(utter);
   };
 
-  // Structure of page
-
+////////////////////////////////////////////////
+// Page Layout
+////////////////////////////////////////////////
   return (
     <OrientationLock>
-      <View style={styles.container}>
-      <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
-        <TouchableOpacity style={styles.backButton}
-          onPress={() => {
-            synthRef.current.cancel();
-            setSpeaking(false);
-          }}>
+      <View style={styles.container} {...handlePanResponder.panHandlers}>
+        <View style={styles.header} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
+          <TouchableOpacity style={styles.backButton}
+            onPress={() => {
+              synthRef.current.cancel();
+              setSpeaking(false);
+            }}>
 
-          <Link href="/" style={styles.backButtonLink}>
-            <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-            <Text style={styles.backButtonText}>Home</Text>
-          </Link>
-        </TouchableOpacity>
-        <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
-        <TouchableOpacity style={styles.helpButton}>
-          <Link href={'/help' as any} style={styles.helpButtonLink}>
-            <Text style={styles.helpButtonText}>?</Text>
-          </Link>
-        </TouchableOpacity>
-      </View>
-
-      {/* Map */}
-      <View
-        style={[styles.mapArea, { touchAction: 'none' } as any]}
-        onLayout={onMapLayout}
-        // @ts-expect-error onWheel is web-only; prevents page zoom on trackpad pinch
-        onWheel={(e) => {
-          // prevent browser zoom/scroll on trackpad pinch
-          if (e && typeof e.preventDefault === 'function') e.preventDefault();
-        }}
-      >
-        <Animated.View
-          style={[
-            styles.mapContent,
-            {
-              transform: [
-                { translateX: pan.x },
-                { translateY: pan.y },
-                { scale: scale },
-              ],
-            },
-          ]}
-          {...panResponder.panHandlers}
-        >
-
-          {floorplanUri ? (
-            <SvgUri
-              uri={floorplanUri}
-              width="100%"
-              height="100%"
-              preserveAspectRatio="xMidYMid meet"
-              style={styles.floor}
-              pointerEvents="none"
-            />
-          ) : (
-            <View style={[styles.floor, styles.floorFallback]} pointerEvents="none" />
-          )}
-
-          {allMarkers.map(m => (
-            <TouchableOpacity
-              key={m.id}
-              accessibilityRole="button"
-              style={[styles.pin, {
-                left: `${m.x * 100}%`,
-                top: `${m.y * 100}%`,
-                backgroundColor: Colours.primaryColour
-              }]}
-              onPress={() => {
-                // Update activity and track POI click analytics
-                updateActivity();
-                Analytics.trackPOIClick(m.originalId || m.id, m.title);
-
-                setSheetId(m.id);
-                // Do not auto open the sheet, it opens only on swipe up
-              }}
-            >
-              <Text style={styles.pinText}>{m.id}</Text>
-            </TouchableOpacity>
-          ))}
-        </Animated.View>
-      </View>
-
-
-
-      <View style={styles.bottomBanner}>
-        <View
-          style={styles.bannerTopBar}
-          {...handlePanResponder.panHandlers}
-          hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
-        >
-          <View style={{ width: 48 }} />
-          <View style={styles.bannerHandle} />
-          <View style={{ width: 48 }} />
+            <Link href="/" style={styles.backButtonLink}>
+              <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+              <Text style={styles.backButtonText}>Home</Text>
+            </Link>
+          </TouchableOpacity>
+          <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+          <TouchableOpacity style={styles.helpButton}>
+            <Link href={'/help' as any} style={styles.helpButtonLink}>
+              <Text style={styles.helpButtonText}>?</Text>
+            </Link>
+          </TouchableOpacity>
         </View>
-        <View style={styles.bannerContent}>
-          {selectedMarker && (
-            <>
-              {selectedMarker.id >= 2 && selectedMarker.id <= 26 ? (
+        
+        {/* Map */}
+        <View
+          style={[styles.mapArea, { touchAction: 'none' } as any]}
+          onLayout={onMapLayout}
+          // @ts-expect-error onWheel is web-only; prevents page zoom on trackpad pinch
+          onWheel={(e) => {
+            // prevent browser zoom/scroll on trackpad pinch
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          }}
+        >
+          <Animated.View
+            style={[
+              styles.mapContent,
+              {
+                transform: [
+                  { translateX: pan.x },
+                  { translateY: pan.y },
+                  { scale: scale },
+                ],
+              },
+            ]}
+            {...panResponder.panHandlers}
+          >
+
+            {floorplanUri ? (
+              <SvgUri
+                uri={floorplanUri}
+                width="100%"
+                height="100%"
+                preserveAspectRatio="xMidYMid meet"
+                style={styles.floor}
+                pointerEvents="none"
+              />
+            ) : (
+              <View style={[styles.floor, styles.floorFallback]} pointerEvents="none" />
+            )}
+
+            {databaseMarkers.map(m => (
+              <TouchableOpacity
+                key={m.id}
+                accessibilityRole="button"
+                style={[styles.pin, {
+                  left: `${m.x * 100}%`,
+                  top: `${m.y * 100}%`,
+                  backgroundColor: Colours.primaryColour
+                }]}
+                onPress={() => {
+                  updateActivity();
+                  Analytics.trackPOIClick(m.originalId || m.id, m.title);
+                  setSheetId(m.id);
+                }}
+              >
+                <Text style={styles.pinText}>{m.id}</Text>
+              </TouchableOpacity>
+            ))}
+          </Animated.View>
+        </View>
+
+        {/* Bottom Banner */}
+        <View style={styles.bottomBanner}>
+          <View
+            style={styles.bannerTopBar}
+            hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
+            {...PanResponder.create({
+              onStartShouldSetPanResponder: () => true,
+              onMoveShouldSetPanResponder: (_, gestureState) => {
+                return Math.abs(gestureState.dy) > 5;
+              },
+              onPanResponderGrant: () => {
+                updateActivity();
+              },
+              onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dy < -20) {
+                  setIsSheetVisible(true);
+                  Animated.spring(sheetTranslateY, {
+                    toValue: 0,
+                    useNativeDriver: true,
+                    tension: 80,
+                    friction: 12,
+                  }).start();
+
+                  if (selectedMarker) {
+                    updateActivity();
+                  }
+                }
+              },
+              onPanResponderRelease: () => {
+
+              },
+            }).panHandlers}
+          >
+            <View style={{ width: 48 }} />
+            <TouchableOpacity
+              style={styles.bannerHandle}
+              activeOpacity={0.7}
+            />
+            <View style={{ width: 48 }} />
+          </View>
+          <View style={styles.bannerContent}>
+            {selectedMarker && (
+              <>
+                {selectedMarker.id >= 2 && selectedMarker.id <= 26 ? (
+                  <TouchableOpacity
+                    style={styles.navButton}
+                    onPress={() => {
+                      updateActivity();
+                      synthRef.current.cancel();
+                      setSpeaking(false);
+                      const idx = databaseMarkers.findIndex(m => m.id === selectedMarker.id);
+                      const prev = databaseMarkers[(idx - 1 + databaseMarkers.length) % databaseMarkers.length];
+                      setSheetId(prev.id);
+                    }}
+                  >
+                    <MaterialIcons name="chevron-left" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ width: 44 }} />
+                )}
+
                 <TouchableOpacity
-                  style={styles.navButton}
+                  style={styles.bannerCenter}
+                  activeOpacity={0.7}
+                  {...PanResponder.create({
+                    onStartShouldSetPanResponder: () => true,
+                    onMoveShouldSetPanResponder: (_, gestureState) => {
+                      return Math.abs(gestureState.dy) > 5;
+                    },
+                    onPanResponderGrant: () => {
+                      updateActivity();
+                    },
+                    onPanResponderMove: (_, gestureState) => {
+                      if (gestureState.dy < -20) {
+                        setIsSheetVisible(true);
+                        Animated.spring(sheetTranslateY, {
+                          toValue: 0,
+                          useNativeDriver: true,
+                          tension: 80,
+                          friction: 12,
+                        }).start();
+
+                        if (selectedMarker) {
+                          updateActivity();
+                        }
+                      }
+                    },
+                    onPanResponderRelease: () => {
+
+                    },
+                  }).panHandlers}
+                >
+                  <View style={styles.bannerIndex}>
+                    <Text style={styles.bannerIndexText}>{selectedMarker.id}</Text>
+                  </View>
+                  <Text style={styles.bannerTitle}>{selectedMarker.title}</Text>
+                </TouchableOpacity>
+
+                {selectedMarker.id === 26 ? (
+                  <TouchableOpacity
+                    style={styles.endTourButton}
+                    onPress={() => {
+                      updateActivity();
+                      window.location.href = '/ThankYou';
+                    }}
+                  >
+                    <Text style={styles.endTourButtonText}>End Tour</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.navButton}
+                    onPress={() => {
+                      updateActivity();
+                      const idx = databaseMarkers.findIndex(m => m.id === selectedMarker.id);
+                      const next = databaseMarkers[(idx + 1) % databaseMarkers.length];
+                      setSheetId(next.id);
+                    }}
+                  >
+                    <MaterialIcons name="chevron-right" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+
+          {selectedMarker && (
+            <View style={styles.bannerFooter}>
+              <View
+                style={styles.swipeUpButton}
+                {...PanResponder.create({
+                  onStartShouldSetPanResponder: () => true,
+                  onMoveShouldSetPanResponder: (_, gestureState) => {
+                    return Math.abs(gestureState.dy) > 5;
+                  },
+                  onPanResponderGrant: () => {
+                    updateActivity();
+                  },
+                  onPanResponderMove: (_, gestureState) => {
+                    if (gestureState.dy < -20) {
+                      setIsSheetVisible(true);
+                      Animated.spring(sheetTranslateY, {
+                        toValue: 0,
+                        useNativeDriver: true,
+                        tension: 10,
+                        friction: 18,
+                      }).start();
+
+                      if (selectedMarker) {
+                        updateActivity();
+                      }
+                    }
+                  },
+                  onPanResponderRelease: () => {
+
+                  },
+                }).panHandlers}
+              >
+                <MaterialIcons name="keyboard-double-arrow-up" size={20} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                <Text style={styles.swipeUpText}>Swipe up for more information</Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {isSheetVisible && selectedMarker && (
+          <Animated.View
+            style={[
+              styles.sheet,
+              { top: 0 },
+              { transform: [{ translateY: sheetTranslateY }] }
+            ]}
+          >
+            <View
+              style={styles.sheetTopBar}
+              hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
+            >
+              <TouchableOpacity
+                style={styles.sheetBackButton}
+                onPress={() => {
+                  updateActivity();
+                  synthRef.current.cancel();
+                  setSpeaking(false);
+                  hideSheet();
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.sheetBackText}>
+                  <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                  Back
+                </Text>
+              </TouchableOpacity>
+              <View style={styles.sheetTopHandle} />
+              <View style={{ width: 80 }} />
+
+            </View>
+
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
+              showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={(e) => {
+                sheetScrollY.current = e.nativeEvent.contentOffset.y;
+                // Track activity on scroll to show user is engaged
+                updateActivity();
+              }}
+              overScrollMode={'never'}
+            >
+              <View style={styles.sheetHeaderRow}>
+                <View style={styles.sheetIndex}>
+                  <Text style={styles.pinText}>{selectedMarker.id}</Text>
+                </View>
+                <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (selectedMarker.imageID) {
+                    const imageUrl = imageUrls.get(selectedMarker.imageID);
+                    if (imageUrl) {
+                      setSelectedImageUri(imageUrl);
+                      setSelectedImageTitle(selectedMarker.title);
+                      setImageModalVisible(true);
+                      // Track user for viewing image
+                      updateActivity();
+                    }
+                  }
+                }}
+                style={styles.imageContainer}
+              >
+                <POIImage
+                  imageID={selectedMarker.imageID}
+                  style={styles.sheetImage}
+                  fallbackSource={fallbackImg}
+                  resizeMode="cover"
+                  onError={(error: any) => console.error('POI Image Error:', error)}
+                />
+
+                <View style={styles.inspectOverlay}>
+                  <Text style={styles.inspectText}>Tap to view</Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.contentSection}>
+                <Text style={styles.sheetBody}>
+                  {selectedMarker.blurb || 'Discover the rich history and significance of this sacred space within St. George\'s Cathedral.'}
+                </Text>
+              </View>
+
+              {selectedMarker.history && selectedMarker.history !== selectedMarker.blurb && (
+                <View style={styles.contentSection}>
+                  <Text style={styles.sectionTitle}>Historical Significance</Text>
+                  <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
+                </View>
+              )}
+
+              <View style={styles.churchFooter}>
+                <Text style={styles.footerText}>St. George's Cathedral</Text>
+                <Text style={styles.footerSubtext}>The People's Cathedral</Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.sheetFooter}>
+              {selectedMarker?.id >= 2 && selectedMarker?.id <= 26 ? (
+                <TouchableOpacity
+                  style={styles.navPillPrev}
                   onPress={() => {
                     updateActivity();
                     synthRef.current.cancel();
                     setSpeaking(false);
-                    const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
-                    const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
+                    const idx = databaseMarkers.findIndex(m => m.id === selectedMarker?.id);
+                    const prev = databaseMarkers[(idx - 1 + databaseMarkers.length) % databaseMarkers.length];
                     setSheetId(prev.id);
                   }}
                 >
-                  <MaterialIcons name="chevron-left" size={28} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                  <Text style={styles.sheetBackText}>
+                    <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                    Previous
+                  </Text>
                 </TouchableOpacity>
               ) : (
-                <View style={{ width: 44 }} />
+                <View style={{ width: 96 }} />
               )}
 
-              <View style={styles.bannerCenter}>
-                <View style={styles.bannerIndex}>
-                  <Text style={styles.bannerIndexText}>{selectedMarker.id}</Text>
+              <View style={styles.audioBackdrop}>
+                <View style={styles.audioDock}>
+                  <TouchableOpacity
+                    style={styles.audioCircle}
+                    onPress={() => {
+                      updateActivity();
+                      handleSpeak();
+                    }}
+                    accessibilityRole="button"
+                  >
+                    {speaking ?
+                      <MaterialIcons name="pause" size={24} color={Colours.white} />
+                      : <MaterialIcons name="play-arrow" size={24} color={Colours.white} />
+                    }
+                  </TouchableOpacity>
+                  <Text style={styles.audioLabel}>Audio Guide</Text>
                 </View>
-                <Text style={styles.bannerTitle}>{selectedMarker.title}</Text>
               </View>
 
-              {selectedMarker.id === 26 ? (
-                <TouchableOpacity 
-                  style={styles.endTourButton}
+              {selectedMarker?.id === 26 ? (
+                <TouchableOpacity
+                  style={styles.endTourPill}
                   onPress={() => {
                     updateActivity();
-                    // Navigate to Thank You page
+                    synthRef.current.cancel();
+                    setSpeaking(false);
                     window.location.href = '/ThankYou';
                   }}
                 >
-                  <Text style={styles.endTourButtonText}>End Tour</Text>
+                  <Text style={styles.endTourPillText}>End Tour</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity 
-                  style={styles.navButton}
+                <TouchableOpacity
+                  style={styles.navPillNext}
                   onPress={() => {
                     updateActivity();
-                    const idx = allMarkers.findIndex(m => m.id === selectedMarker.id);
-                    const next = allMarkers[(idx + 1) % allMarkers.length];
+                    synthRef.current.cancel();
+                    setSpeaking(false);
+                    const idx = databaseMarkers.findIndex(m => m.id === selectedMarker?.id);
+                    const next = databaseMarkers[(idx + 1) % databaseMarkers.length];
                     setSheetId(next.id);
                   }}
                 >
-                  <Text style={styles.navButtonText}>›</Text>
+                  <Text style={[styles.endTourPillText, styles.pillGhostText]}>
+                    Next
+                    <MaterialIcons name="keyboard-arrow-right" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
+                  </Text>
                 </TouchableOpacity>
               )}
-            </>
-          )}
-        </View>
-
-        {selectedMarker && (
-          <View style={styles.bannerFooter}>
-            <View 
-              style={styles.swipeUpButton}
-              {...PanResponder.create({
-                onStartShouldSetPanResponder: () => true,
-                onMoveShouldSetPanResponder: (_, gestureState) => {
-                  return Math.abs(gestureState.dy) > 5;
-                },
-                onPanResponderGrant: () => {
-                  updateActivity();
-                },
-                onPanResponderMove: (_, gestureState) => {
-                  // If swiping up (negative dy), move the sheet
-                  if (gestureState.dy < -20) {
-                    setIsSheetVisible(true);
-                    Animated.spring(sheetTranslateY, {
-                      toValue: 0,
-                      useNativeDriver: true,
-                    }).start();
-                    
-                    if (selectedMarker) {
-                      updateActivity();
-                    }
-                  }
-                },
-                onPanResponderRelease: () => {
-                  // Handle tap if no significant movement
-                },
-              }).panHandlers}
-            >
-              <MaterialIcons name="keyboard-double-arrow-up" size={20} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-              <Text style={styles.swipeUpText}>Swipe up for more information</Text>
             </View>
-          </View>
+          </Animated.View>
         )}
+
+        <ImageModal
+          visible={imageModalVisible}
+          imageUri={selectedImageUri}
+          title={selectedImageTitle}
+          onClose={() => setImageModalVisible(false)}
+        />
+
+        {/* Cookie Consent Banner */}
+        <CookieConsent show={showCookieConsent} />
       </View>
-
-
-      {isSheetVisible && selectedMarker && (
-        <Animated.View
-          style={[
-            styles.sheet,
-            { top: 0 },
-            { transform: [{ translateY: sheetTranslateY }] }
-          ]}
-        >
-          <View
-            style={styles.sheetTopBar}
-            {...handlePanResponder.panHandlers}
-            hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
-          >
-            <TouchableOpacity
-              style={styles.sheetBackButton}
-              onPress={() => {
-                updateActivity();
-                synthRef.current.cancel();
-                setSpeaking(false);
-                hideSheet();
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.sheetBackText}>
-                <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-                Back
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.sheetTopHandle} />
-            <View style={{ width: 80 }} />
-
-          </View>
-
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            showsVerticalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onScroll={(e) => {
-              sheetScrollY.current = e.nativeEvent.contentOffset.y;
-              // Track activity on scroll to show user is actively engaged
-              updateActivity();
-            }}
-            overScrollMode={'never'}
-          >
-            <View style={styles.sheetHeaderRow}>
-              <View style={styles.sheetIndex}>
-                <Text style={styles.pinText}>{selectedMarker.id}</Text>
-              </View>
-              <Text style={styles.sheetTitle}>{selectedMarker.title}</Text>
-            </View>
-            
-            <TouchableOpacity
-              onPress={() => {
-                if (selectedMarker.imageID) {
-                  const imageUrl = imageUrls.get(selectedMarker.imageID);
-                  if (imageUrl) {
-                    setSelectedImageUri(imageUrl);
-                    setSelectedImageTitle(selectedMarker.title);
-                    setImageModalVisible(true);
-                    
-                    // Track user activity
-                    updateActivity();
-                  }
-                }
-              }}
-              style={styles.imageContainer}
-            >
-              <POIImage 
-                imageID={selectedMarker.imageID} 
-                style={styles.sheetImage} 
-                fallbackSource={fallbackImg}
-                resizeMode="cover"
-                onError={(error: any) => console.error('POI Image Error:', error)}
-              />
-              
-              {/* Add inspect overlay */}
-              <View style={styles.inspectOverlay}>
-                <Text style={styles.inspectText}>Tap to inspect</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <View style={styles.contentSection}>
-              <Text style={styles.sheetBody}>
-                {selectedMarker.blurb || 'Discover the rich history and significance of this sacred space within St. George\'s Cathedral.'}
-              </Text>
-            </View>
-
-            {selectedMarker.history && selectedMarker.history !== selectedMarker.blurb && (
-              <View style={styles.contentSection}>
-                <Text style={styles.sectionTitle}>Historical Significance</Text>
-                <Text style={styles.sheetBody}>{selectedMarker.history}</Text>
-              </View>
-            )}
-
-            <View style={styles.churchFooter}>
-              <Text style={styles.footerText}>St. George&apos;s Cathedral</Text>
-              <Text style={styles.footerSubtext}>The People&apos;s Cathedral</Text>
-            </View>
-          </ScrollView>
-
-          <View style={styles.sheetFooter}>
-            {selectedMarker?.id >= 2 && selectedMarker?.id <= 26 ? (
-              <TouchableOpacity
-                style={styles.navPillPrev}
-                onPress={() => {
-                  updateActivity();
-                  synthRef.current.cancel();
-                  setSpeaking(false);
-                  const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
-                  const prev = allMarkers[(idx - 1 + allMarkers.length) % allMarkers.length];
-                  setSheetId(prev.id);
-                }}
-              >
-                <Text style={styles.sheetBackText}>
-                  <MaterialIcons name="keyboard-arrow-left" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-                  Previous
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={{ width: 96 }} />
-            )}
-
-            <View style={styles.audioBackdrop}>
-              <View style={styles.audioDock}>
-                <TouchableOpacity
-                  style={styles.audioCircle}
-                  onPress={() => {
-                    updateActivity();
-                    handleSpeak();
-                  }}
-                  accessibilityRole="button"
-                >
-                  {speaking ?
-                    <MaterialIcons name="pause" size={24} color={Colours.white} />
-                    : <MaterialIcons name="play-arrow" size={24} color={Colours.white} />
-                  }
-                </TouchableOpacity>
-                <Text style={styles.audioLabel}>Audio Guide</Text>
-              </View>
-            </View>
-
-            {selectedMarker?.id === 26 ? (
-              <TouchableOpacity
-                style={styles.endTourPill}
-                onPress={() => {
-                  updateActivity();
-                  synthRef.current.cancel();
-                  setSpeaking(false);
-                  // Navigate to Thank You page
-                  window.location.href = '/ThankYou';
-                }}
-              >
-                <Text style={styles.endTourPillText}>End Tour</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.navPillNext}
-                onPress={() => {
-                  updateActivity();
-                  synthRef.current.cancel();
-                  setSpeaking(false);
-                  const idx = allMarkers.findIndex(m => m.id === selectedMarker?.id);
-                  const next = allMarkers[(idx + 1) % allMarkers.length];
-                  setSheetId(next.id);
-                }}
-              >
-                <Text style={[styles.endTourPillText, styles.pillGhostText]}>
-                  Next
-                  <MaterialIcons name="keyboard-arrow-right" size={18} color={Colours.primaryColour} style={{ textAlignVertical: 'center' }} />
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </Animated.View>
-      )}
-      
-      {/* Image Inspection Modal */}
-      <ImageModal
-        visible={imageModalVisible}
-        imageUri={selectedImageUri}
-        title={selectedImageTitle}
-        onClose={() => setImageModalVisible(false)}
-      />
-      
-      {/* Cookie Consent Banner */}
-      {showCookieConsent && <CookieConsent />}
-    </View>
     </OrientationLock>
   );
 };
 
-
+////////////////////////////////////////////////
 // Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -876,11 +922,10 @@ const styles = StyleSheet.create({
     color: Colours.primaryColour,
     fontSize: 24,
     fontWeight: '800',
-    textAlign: 'left',
+    textAlign: 'center',
     fontFamily: 'PlayfairDisplay-Bold',
     letterSpacing: 0.5,
     flex: 1,
-    paddingLeft: 45,
   },
   mapArea: {
     flex: 1,
@@ -943,24 +988,6 @@ const styles = StyleSheet.create({
     elevation: 8,
     zIndex: 1000,
     overscrollBehavior: 'contain',
-  },
-  sheetBackgroundOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: Colours.white,
-    zIndex: 999, 
-  },
-  sheetHandle: { 
-    alignSelf: 'center', 
-    width: 50, 
-    height: 5, 
-    borderRadius: 3, 
-    backgroundColor: Colours.primaryColour, 
-    marginBottom: 16,
-    opacity: 0.6,
   },
   sheetTopBar: {
     flexDirection: 'row',
@@ -1205,23 +1232,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 12,
   },
-  navPill: {
-    backgroundColor: Colours.white,
-    borderWidth: 1,
-    borderColor: Colours.primaryColour,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    minWidth: 96,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colours.primaryColour,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   endTourPill: {
     backgroundColor: Colours.primaryColour,
     borderWidth: 1,
@@ -1246,25 +1256,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: Colours.white,
   },
-  pillGhost: { 
-    backgroundColor: Colours.surfaceColour,
-    borderWidth: 1,
-    borderColor: Colours.surfaceVariantColour,
-  },
-  pillGhostText: { 
-    color: Colours.primaryColour 
-  },
-  pillPrimary: { 
-    backgroundColor: Colours.primaryColour,
-    shadowColor: Colours.primaryColour,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  pillPrimaryText: { 
-    color: Colours.white,
-    fontWeight: '700',
+  pillGhostText: {
+    color: Colours.primaryColour
   },
   bottomBanner: {
     position: 'absolute',
@@ -1345,12 +1338,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  navButtonText: {
-    color: Colours.primaryColour,
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'Inter-Bold',
   },
   endTourButton: {
     paddingHorizontal: 16,

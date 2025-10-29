@@ -1,14 +1,12 @@
-//Home Page of the App
-//Three Buttons: Begin Virtual Tour, First Thursdays, Donate
-
 import { Colours } from '@/constants/Colours';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React from 'react';
 import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-
-// Cathedral Icon Component
+////////////////////////////////////////////////
+// Load image component separately
+////////////////////////////////////////////////
 const CathedralIcon = () => (
   <View style={{ alignItems: 'center', marginBottom: 20 }}>
     <Image
@@ -19,9 +17,14 @@ const CathedralIcon = () => (
   </View>
 );
 
+////////////////////////////////////////////////
+// Cathedral Home Page
+// Three buttons:
+// - To map page
+// - To First Thursdays page
+// - To cathedral donation page
+////////////////////////////////////////////////
 const CathedralHomePage = () => {
-
-  //Donate button link to St Georges Cathedral website
   const handleDonate = () => {
     const url = 'https://sgcathedral.co.za/donate-now/';
     Linking.openURL(url).catch(() => {
@@ -67,6 +70,9 @@ const CathedralHomePage = () => {
   );
 };
 
+////////////////////////////////////////////////
+// Styles
+////////////////////////////////////////////////
 const styles = StyleSheet.create({
   container: {
     flex: 1,
