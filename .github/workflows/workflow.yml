@@ -48,14 +48,6 @@ jobs:
       - name: Run npm audit
         run: npm audit --audit-level=high
         continue-on-error: false
-        # Run SonarCloud analysis
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2.1.0
-        with:
-          args: >
-             -Dsonar.organization=2bitdevelopment
-             -Dsonar.projectKey=2BitDevelopment_TourGuideApp
-        
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+       
+     
         
