@@ -54,10 +54,11 @@ jobs:
 
         # Run SonarCloud analysis
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarcloud-github-action@v2.1.0
         with:
           args: >
            -Dsonar.projectKey=2BitDevelopment_TourGuideApp
            -Dsonar.organization=2BitDevelopment
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        
