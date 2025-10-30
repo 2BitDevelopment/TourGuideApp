@@ -350,7 +350,7 @@ const MapPage = () => {
   // For loading screen when map loads
   const LoadingScreen = () => (
     <View style={styles.loadingContainer}>
-      <Text style={styles.loadingTitle}>St. George's Cathedral</Text>
+      <Text style={styles.loadingTitle}>St. George&apos;s Cathedral</Text>
       <Text style={styles.loadingSubtitle}>Loading your virtual tour...</Text>
       <ActivityIndicator
         size="large"
@@ -421,7 +421,7 @@ const MapPage = () => {
               <Text style={styles.backButtonText}>Home</Text>
             </Link>
           </TouchableOpacity>
-          <Text style={styles.brand}>St. George's{"\n"}Cathedral</Text>
+          <Text style={styles.brand}>St. George&apos;s{"\n"}Cathedral</Text>
           <TouchableOpacity style={styles.helpButton}>
             <Link href={'/help' as any} style={styles.helpButtonLink}>
               <Text style={styles.helpButtonText}>?</Text>
@@ -744,8 +744,8 @@ const MapPage = () => {
               )}
 
               <View style={styles.churchFooter}>
-                <Text style={styles.footerText}>St. George's Cathedral</Text>
-                <Text style={styles.footerSubtext}>The People's Cathedral</Text>
+                <Text style={styles.footerText}>St. George&apos;s Cathedral</Text>
+                <Text style={styles.footerSubtext}>The People&apos;s Cathedral</Text>
               </View>
             </ScrollView>
 
