@@ -419,14 +419,16 @@ async function generatePdfReport(
   });
 }
 
-
+/**
+ * Sends an email with the provided attachment and subject.
+ * @param attachment 
+ * @param subject 
+ */
 async function sendEmail(attachment: Buffer, subject: string) {
   console.log("Preparing to send email...");
   const transporter = nodemailer.createTransport(mailersendConfig);
 
   try {
-
-
     await transporter.sendMail({
       from: `2BitDevelopment <${process.env.SMTP_USER}>`,
       to: process.env.RECIPIENT_EMAIL || "jwehart.7@gmail.com",
