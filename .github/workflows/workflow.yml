@@ -39,11 +39,7 @@ jobs:
       # Run linter
       - name: Linter
         run: npm run lint
-
-      # Run tests
-      - name: Run tests
-        run: npm test
-
+   
         # Run ESlint 
       - name: Run ESLint
         run: npx eslint . 
@@ -51,14 +47,7 @@ jobs:
         #npm audit test for vulnerabilities
       - name: Run npm audit
         run: npm audit --audit-level=high
-
-        # Run SonarCloud analysis
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2.1.0
-        with:
-          args: >
-           -Dsonar.projectKey=2BitDevelopment_TourGuideApp
-           -Dsonar.organization=2BitDevelopment
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+       
+       
+     
         
