@@ -44,7 +44,7 @@ const MapPage = () => {
     floorplanAsset.localUri ?? floorplanAsset.uri ?? null
   );
   const [headerHeight, setHeaderHeight] = useState<number>(0);
-  const { imageUrls, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
+  const { getImageUrl, preloadPOIImages, isLoading: isLoadingImages } = useImageLoading();
   const sheetScrollY = useRef(0);
 
   //For text-to-speech
@@ -265,7 +265,7 @@ const MapPage = () => {
 
     return sortedPOIs.map((poi, index) => {
       const coords = getPOIMapCoordinates(poi);
-      const imageUrl = imageUrls.get(poi.imageID);
+      const imageUrl = getImageUrl(poi.imageID);
 
       const svgX = coords.x * SVG_WIDTH;
       const svgY = coords.y * SVG_HEIGHT;
@@ -286,7 +286,7 @@ const MapPage = () => {
         poiData: poi
       };
     });
-  }, [dbPOIs, imageUrls, mapSize]);
+  }, [dbPOIs, getImageUrl, mapSize]);
 
   // Current marker
   const selectedMarker = useMemo(() => databaseMarkers.find(m => m.id === sheetId) ?? null, [sheetId, databaseMarkers]);
@@ -304,7 +304,7 @@ const MapPage = () => {
   useEffect(() => {
     const checkDataLoaded = () => {
       if (dbPOIs.length > 0 && !isLoadingImages && !loadingPOIs) {
-        const hasImages = dbPOIs.some(poi => imageUrls.has(poi.imageID));
+        const hasImages = dbPOIs.some(poi => getImageUrl(poi.imageID) !== null);
         if (hasImages || dbPOIs.length > 0) {
           setIsDataLoaded(true);
         }
@@ -312,7 +312,7 @@ const MapPage = () => {
     };
 
     checkDataLoaded();
-  }, [dbPOIs, isLoadingImages, loadingPOIs, imageUrls]);
+  }, [dbPOIs, isLoadingImages, loadingPOIs, getImageUrl]);
 
   useEffect(() => {
     let isMounted = true;
@@ -705,7 +705,7 @@ const MapPage = () => {
               <TouchableOpacity
                 onPress={() => {
                   if (selectedMarker.imageID) {
-                    const imageUrl = imageUrls.get(selectedMarker.imageID);
+                    const imageUrl = getImageUrl(selectedMarker.imageID);
                     if (imageUrl) {
                       setSelectedImageUri(imageUrl);
                       setSelectedImageTitle(selectedMarker.title);

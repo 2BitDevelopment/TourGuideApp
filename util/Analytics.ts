@@ -1,19 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { addDoc, collection, getFirestore, serverTimestamp } from 'firebase/firestore';
 import { firebaseConfig } from '../services/firebase.config';
+import type { AnalyticsEvent } from '../types/database';
 
 // Initialize Firebase for analytics (reuse existing config)
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-export interface AnalyticsEvent {
-  type: 'poi_click' | 'page_view';
-  poiId?: number;
-  poiTitle?: string;
-  sessionId?: string;
-  timestamp?: any;
-  metadata?: Record<string, any>;
-}
 
 export class Analytics {
   private static sessionId: string = Math.random().toString(36).substring(2, 15);
@@ -27,7 +20,7 @@ export class Analytics {
   static async trackPOIClick(poiId: number, poiTitle: string): Promise<void> {
     try {
       Analytics.updateActivity();
-      await addDoc(collection(db, 'poi_clicks'), {
+      const event: AnalyticsEvent = {
         type: 'poi_click',
         poiId,
         poiTitle,
@@ -37,7 +30,8 @@ export class Analytics {
           platform: 'web',
           action: 'marker_clicked'
         }
-      });
+      };
+      await addDoc(collection(db, 'poi_clicks'), event);
     } catch (error) {
       console.error('Failed to track POI click:', error);
     }
@@ -50,7 +44,7 @@ export class Analytics {
   static async trackPageView(pageName: string): Promise<void> {
     try {
       Analytics.updateActivity();
-      await addDoc(collection(db, 'website_views'), {
+      const event: AnalyticsEvent = {
         type: 'page_view',
         sessionId: Analytics.sessionId,
         timestamp: serverTimestamp(),
@@ -58,7 +52,8 @@ export class Analytics {
           platform: 'web',
           page: pageName
         }
-      });
+      };
+      await addDoc(collection(db, 'website_views'), event);
     } catch (error) {
       console.error('Failed to track page view:', error);
     }

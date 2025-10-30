@@ -1,115 +1,115 @@
 import { useCallback, useEffect, useState } from 'react';
 import DatabaseApi, { POI } from '../services/DatabaseApi';
+import { ImageLoadingState } from '../types/database';
 
 interface UseImageLoadingReturn {
-  imageUrls: Map<string, string | null>;
-  loadingStates: Map<string, boolean>;
-  errors: Map<string, string | null>;
+  imageStates: Map<string, ImageLoadingState>;
   loadImage: (imageID: string) => Promise<void>;
   loadImages: (imageIDs: string[]) => Promise<void>;
   preloadPOIImages: (pois: POI[]) => Promise<void>;
   clearCache: () => void;
   isLoading: boolean;
   hasErrors: boolean;
+  getImageUrl: (imageID: string) => string | null;
+  isImageLoading: (imageID: string) => boolean;
+  getImageError: (imageID: string) => string | null;
 }
 
 ////////////////////////////////////////////////
 // For Image component caching, loading, and error handling
 ////////////////////////////////////////////////
 export const useImageLoading = (): UseImageLoadingReturn => {
-  const [imageUrls, setImageUrls] = useState<Map<string, string | null>>(new Map());
-  const [loadingStates, setLoadingStates] = useState<Map<string, boolean>>(new Map());
-  const [errors, setErrors] = useState<Map<string, string | null>>(new Map());
+  const [imageStates, setImageStates] = useState<Map<string, ImageLoadingState>>(new Map());
 
   // Single image loading
   const loadImage = useCallback(async (imageID: string) => {
     if (!imageID || imageID.trim() === '') return;
 
     // Check if already loaded or loading
-    if (imageUrls.has(imageID) || loadingStates.get(imageID)) return;
+    const currentState = imageStates.get(imageID);
+    if (currentState?.url || currentState?.loading) return;
 
     // Set loading state
-    setLoadingStates(prev => new Map(prev.set(imageID, true)));
-    setErrors(prev => {
-      const newErrors = new Map(prev);
-      newErrors.delete(imageID);
-      return newErrors;
-    });
+    setImageStates(prev => new Map(prev.set(imageID, {
+      loading: true,
+      url: null,
+      error: null
+    })));
 
     try {
       const url = await DatabaseApi.loadImage(imageID);
       
-      setImageUrls(prev => new Map(prev.set(imageID, url)));
-      
-      if (!url) {
-        setErrors(prev => new Map(prev.set(imageID, 'Failed to load image')));
-      }
+      setImageStates(prev => new Map(prev.set(imageID, {
+        loading: false,
+        url: url,
+        error: url ? null : 'Failed to load image'
+      })));
     } catch (error) {
       console.error(`Failed to load image ${imageID}:`, error);
-      setErrors(prev => new Map(prev.set(imageID, error instanceof Error ? error.message : 'Unknown error')));
-    } finally {
-      setLoadingStates(prev => {
-        const newStates = new Map(prev);
-        newStates.delete(imageID);
-        return newStates;
-      });
+      setImageStates(prev => new Map(prev.set(imageID, {
+        loading: false,
+        url: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })));
     }
-  }, [imageUrls, loadingStates]);
+  }, [imageStates]);
 
   // Multiple images loading
   const loadImages = useCallback(async (imageIDs: string[]) => {
     if (!imageIDs || imageIDs.length === 0) return;
 
     const validImageIDs = imageIDs.filter(id => id && id.trim());
-    const uncachedImageIDs = validImageIDs.filter(id => !imageUrls.has(id) && !loadingStates.get(id));
+    const uncachedImageIDs = validImageIDs.filter(id => {
+      const state = imageStates.get(id);
+      return !state?.url && !state?.loading;
+    });
 
     if (uncachedImageIDs.length === 0) return;
 
     // Set loading states for all uncached images
-    setLoadingStates(prev => {
+    setImageStates(prev => {
       const newStates = new Map(prev);
-      uncachedImageIDs.forEach(id => newStates.set(id, true));
+      uncachedImageIDs.forEach(id => newStates.set(id, {
+        loading: true,
+        url: null,
+        error: null
+      }));
       return newStates;
-    });
-
-    // Clear previous errors for these images
-    setErrors(prev => {
-      const newErrors = new Map(prev);
-      uncachedImageIDs.forEach(id => newErrors.delete(id));
-      return newErrors;
     });
 
     try {
       const results = await DatabaseApi.loadImages(uncachedImageIDs);
       
-      // Update image URLs
-      setImageUrls(prev => {
-        const newUrls = new Map(prev);
+      // Update image states
+      setImageStates(prev => {
+        const newStates = new Map(prev);
         results.forEach((url, imageID) => {
-          newUrls.set(imageID, url);
-          if (!url) {
-            setErrors(prevErrors => new Map(prevErrors.set(imageID, 'Failed to load image')));
-          }
+          newStates.set(imageID, {
+            loading: false,
+            url: url,
+            error: url ? null : 'Failed to load image'
+          });
         });
-        return newUrls;
+        return newStates;
       });
 
     } catch (error) {
       console.error('Failed to load images:', error);
       
       // Set error for all failed images
-      uncachedImageIDs.forEach(imageID => {
-        setErrors(prev => new Map(prev.set(imageID, error instanceof Error ? error.message : 'Unknown error')));
-      });
-    } finally {
-      // Clear loading states
-      setLoadingStates(prev => {
+      setImageStates(prev => {
         const newStates = new Map(prev);
-        uncachedImageIDs.forEach(id => newStates.delete(id));
+        uncachedImageIDs.forEach(imageID => {
+          newStates.set(imageID, {
+            loading: false,
+            url: null,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        });
         return newStates;
       });
     }
-  }, [imageUrls, loadingStates]);
+  }, [imageStates]);
 
   // Preload POI images
   const preloadPOIImages = useCallback(async (pois: POI[]) => {
@@ -124,26 +124,38 @@ export const useImageLoading = (): UseImageLoadingReturn => {
 
   // Clear cache
   const clearCache = useCallback(() => {
-    setImageUrls(new Map());
-    setLoadingStates(new Map());
-    setErrors(new Map());
+    setImageStates(new Map());
     DatabaseApi.clearImageCache();
   }, []);
 
+  // Helper functions
+  const getImageUrl = useCallback((imageID: string): string | null => {
+    return imageStates.get(imageID)?.url || null;
+  }, [imageStates]);
+
+  const isImageLoading = useCallback((imageID: string): boolean => {
+    return imageStates.get(imageID)?.loading || false;
+  }, [imageStates]);
+
+  const getImageError = useCallback((imageID: string): string | null => {
+    return imageStates.get(imageID)?.error || null;
+  }, [imageStates]);
+
   // Computed states
-  const isLoading = loadingStates.size > 0;
-  const hasErrors = errors.size > 0;
+  const isLoading = Array.from(imageStates.values()).some(state => state.loading);
+  const hasErrors = Array.from(imageStates.values()).some(state => state.error !== null);
 
   return {
-    imageUrls,
-    loadingStates,
-    errors,
+    imageStates,
     loadImage,
     loadImages,
     preloadPOIImages,
     clearCache,
     isLoading,
-    hasErrors
+    hasErrors,
+    getImageUrl,
+    isImageLoading,
+    getImageError
   };
 };
 
@@ -152,7 +164,7 @@ export const useImageLoading = (): UseImageLoadingReturn => {
 // Hook for loading a single image with loading state
 ////////////////////////////////////////////////
 export const useSingleImage = (imageID: string | undefined) => {
-  const { imageUrls, loadingStates, errors, loadImage } = useImageLoading();
+  const { imageStates, loadImage } = useImageLoading();
   
   useEffect(() => {
     if (imageID) {
@@ -160,14 +172,12 @@ export const useSingleImage = (imageID: string | undefined) => {
     }
   }, [imageID, loadImage]);
 
-  const isLoading = imageID ? loadingStates.get(imageID) || false : false;
-  const error = imageID ? errors.get(imageID) || null : null;
-  const imageUrl = imageID ? imageUrls.get(imageID) || null : null;
-
+  const state = imageID ? imageStates.get(imageID) : undefined;
+  
   return {
-    imageUrl,
-    isLoading,
-    error,
+    imageUrl: state?.url || null,
+    isLoading: state?.loading || false,
+    error: state?.error || null,
     retry: () => imageID && loadImage(imageID)
   };
 };
