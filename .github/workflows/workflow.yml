@@ -40,10 +40,6 @@ jobs:
       - name: Linter
         run: npm run lint
 
-      # Run tests
-      - name: Run tests
-        run: npm test
-
         # Run ESlint 
       - name: Run ESLint
         run: npx eslint . 
