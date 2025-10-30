@@ -39,15 +39,15 @@ jobs:
       # Run linter
       - name: Linter
         run: npm run lint
-        continue-on-error: false
+   
         # Run ESlint 
       - name: Run ESLint
         run: npx eslint . 
-        continue-on-error: false
+
         #npm audit test for vulnerabilities
       - name: Run npm audit
         run: npm audit --audit-level=high
-        continue-on-error: false
+       
        
      
         
