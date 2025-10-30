@@ -53,8 +53,9 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@v2.1.0
         with:
           args: >
-           -Dsonar.projectKey=2BitDevelopment_TourGuideApp
-           -Dsonar.organization=2BitDevelopment
+             -Dsonar.organization=2bitdevelopment
+             -Dsonar.projectKey=2BitDevelopment_TourGuideApp
+        
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         
