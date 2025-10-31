@@ -147,8 +147,7 @@ npm run build
 
 #### Development Commands
 
-- `npm start` - Start Expo development server
-- `npm run web` - Start web development server
+- `npm run start` - Start web development server
 - `npm run lint` - Run ESLint to check code quality
 - `npm run predeploy` - Build production web version
 - `npm run deploy-hosting` - Deploy to Firebase Hosting
