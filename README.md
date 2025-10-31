@@ -222,7 +222,7 @@ Ensure these Firebase services are enabled in your Firebase Console:
 
 ## Project Structure
 
-will add screenshot
+![Code Structure](readme_media/Code_Architecture.png)
 
 
 ## Usage
