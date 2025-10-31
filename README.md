@@ -303,4 +303,39 @@ firebase deploy --only functions
 *Last updated: October 2025*
 *Version: 1.0.0*
 
-##References:
+## References
+
+### Core Frameworks & Languages
+- [React Documentation](https://react.dev)
+- [React Native Documentation](https://reactnative.dev)
+- [Expo Documentation](https://docs.expo.dev)
+- [Node.js Documentation](https://nodejs.org)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs)
+- [MDN JavaScript Reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference)
+
+### Navigation & Structure
+- [Expo Router Documentation](https://docs.expo.dev/router/introduction/)
+- [React Navigation Documentation](https://reactnavigation.org/docs/getting-started/)
+- [Deep Linking (Expo)](https://docs.expo.dev/guides/deep-linking/)
+
+### React Hooks & Patterns
+- [Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)
+- [useState Hook](https://react.dev/reference/react/useState)
+- [useEffect Hook](https://react.dev/reference/react/useEffect)
+- [useRef Hook](https://react.dev/reference/react/useRef)
+- [useMemo Hook](https://react.dev/reference/react/useMemo)
+- [React Context](https://react.dev/learn/passing-data-deeply-with-context)
+
+### Styling & UI
+- [React Native Styling](https://reactnative.dev/docs/style)
+- [Image Component](https://reactnative.dev/docs/image)
+- [react-native-svg Library](https://github.com/software-mansion/react-native-svg)
+
+### Package & Build Tooling
+- [npm Documentation](https://docs.npmjs.com)
+- [Metro Bundler Documentation](https://metrobundler.dev/)
+- [ESLint Documentation](https://eslint.org/docs/latest/)
+
+### Community & Stack Overflow Resources
+- [React Hooks: Avoiding Infinite Loops](https://stackoverflow.com/questions/53070970)
+- [Expo Router vs React Navigation Discussion](https://stackoverflow.com/questions/76778552)
