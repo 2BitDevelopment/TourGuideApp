@@ -302,3 +302,5 @@ firebase deploy --only functions
 
 *Last updated: October 2025*
 *Version: 1.0.0*
+
+##References:
