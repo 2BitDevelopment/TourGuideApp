@@ -309,83 +309,73 @@ firebase deploy --only functions
 - [React Documentation](https://react.dev)
 - [React Native Documentation](https://reactnative.dev)
 - [Expo Documentation](https://docs.expo.dev)
-- [Node.js Documentation](https://nodejs.org)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs)
 - [MDN JavaScript Reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference)
 
-### Video Tutorials & Learning
-- [React Native Crash Course 2021](https://www.youtube.com/watch?v=0-S5a0eXPoc) 
-- [Expo Tutorial for Beginners](https://www.youtube.com/watch?v=obH0Po_RdWk) 
-- [TypeScript Crash Course](https://www.youtube.com/watch?v=ahCwqrYpIuM) 
-- [React Native Animations Tutorial](https://www.youtube.com/watch?v=4Vdxiuacqs8) 
-- [Firebase Crash Course](https://www.youtube.com/watch?v=9kRgVxULbag) 
+### Video Tutorials
+- [React Native Tutorial for Beginners](https://www.youtube.com/watch?v=0-S5a0eXPoc)
+- [Expo Tutorial](https://www.youtube.com/watch?v=obH0Po_RdWk)
+- [TypeScript Crash Course](https://www.youtube.com/watch?v=ahCwqrYpIuM)
 
-### Navigation & Structure
+### Navigation (Expo Router)
 - [Expo Router Documentation](https://docs.expo.dev/router/introduction/)
-- [React Navigation Documentation](https://reactnavigation.org/docs/getting-started/)
-- [Deep Linking (Expo)](https://docs.expo.dev/guides/deep-linking/)
 - [Expo Router Tutorial](https://www.youtube.com/watch?v=1hPgQWbWmEk)
+- [Deep Linking with Expo](https://docs.expo.dev/guides/deep-linking/)
 
-### React Hooks & Patterns
-- [Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)
+### React Hooks Used in Project
 - [useState Hook](https://react.dev/reference/react/useState)
 - [useEffect Hook](https://react.dev/reference/react/useEffect)
 - [useRef Hook](https://react.dev/reference/react/useRef)
 - [useMemo Hook](https://react.dev/reference/react/useMemo)
-- [React Context](https://react.dev/learn/passing-data-deeply-with-context)
-- [React Hooks Crash Course](https://www.youtube.com/watch?v=TNhaISOUy6Q) 
-- [Custom Hooks Tutorial](https://www.youtube.com/watch?v=6ThXsUwLWvc) 
+- [Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)
+- [React Hooks Crash Course](https://www.youtube.com/watch?v=TNhaISOUy6Q)
 
 ### Gesture Handling & Animations
 - [PanResponder Documentation](https://reactnative.dev/docs/panresponder)
 - [Animated API Documentation](https://reactnative.dev/docs/animated)
 - [React Native Gestures Tutorial](https://www.youtube.com/watch?v=1hPgQWbWmEk)
-- [React Native Animations Masterclass](https://www.youtube.com/watch?v=HE7HaxGv1vw) 
-- [React Native Reanimated 2 Tutorial](https://www.youtube.com/watch?v=yz9E10x2sgs) 
 
 ### Styling & UI Components
 - [React Native Styling](https://reactnative.dev/docs/style)
+- [react-native-svg Documentation](https://github.com/software-mansion/react-native-svg)
 - [Image Component](https://reactnative.dev/docs/image)
-- [react-native-svg Library](https://github.com/software-mansion/react-native-svg)
-- [SVG in React Native Tutorial](https://www.youtube.com/watch?v=wQ6RoeJ9opY) 
-- [React Native Styling Best Practices](https://www.youtube.com/watch?v=JSI8Q_TfpUE) 
+- [ScrollView Component](https://reactnative.dev/docs/scrollview)
+- [TouchableOpacity Component](https://reactnative.dev/docs/touchableopacity)
+- [ActivityIndicator Component](https://reactnative.dev/docs/activityindicator)
 
-### Firebase Integration
+### Firebase Services Used
 - [Firebase Documentation](https://firebase.google.com/docs)
 - [Firestore Documentation](https://firebase.google.com/docs/firestore)
 - [Firebase Storage Documentation](https://firebase.google.com/docs/storage)
-- [Firebase with React Native Tutorial](https://www.youtube.com/watch?v=m_u6P5k0vP0) 
-- [Firestore Crash Course](https://www.youtube.com/watch?v=jCY6DH8F4vo) 
+- [Firebase with React Native Tutorial](https://www.youtube.com/watch?v=m_u6P5k0vP0)
+- [Firestore Crash Course](https://www.youtube.com/watch?v=jCY6DH8F4vo)
 
-### Advanced Features Used
-- [React Native Dimensions API](https://reactnative.dev/docs/dimensions) 
-- [ScrollView Component](https://reactnative.dev/docs/scrollview) 
-- [TouchableOpacity Component](https://reactnative.dev/docs/touchableopacity)
-- [ActivityIndicator](https://reactnative.dev/docs/activityindicator) 
-- [Session Storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage)
+### React Native APIs Used
+- [Dimensions API](https://reactnative.dev/docs/dimensions)
+- [LayoutChangeEvent](https://reactnative.dev/docs/layout-props)
+- [Session Storage API](https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage)
 
-### Package & Build Tooling
+### Development Tools
 - [npm Documentation](https://docs.npmjs.com)
+- [ESLint Documentation](https://eslint.org/docs/latest/)
 - [Expo Build Process](https://docs.expo.dev/build/introduction/)
+- [Metro Bundler](https://metrobundler.dev/)
 
-### Performance Optimization
+### Performance & Optimization
 - [React Native Performance](https://reactnative.dev/docs/performance)
-- [useMemo and useCallback Explained](https://www.youtube.com/watch?v=THL1OPn72vo) 
-- [React Optimization Techniques](https://www.youtube.com/watch?v=DX47hXvOb4Y) 
+- [useMemo Hook Explained](https://www.youtube.com/watch?v=THL1OPn72vo)
 
-### Best Practices & Design Patterns
-- [React Native Best Practices](https://reactnative.dev/docs/performance) 
+### Best Practices
 - [TypeScript Best Practices](https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html)
-- [Clean Code in React Native](https://www.youtube.com/watch?v=U31aDvU8qjI) 
+- [React Native Best Practices](https://reactnative.dev/docs/performance)
 
-### Community & Stack Overflow Resources
+### Community Resources
 - [React Native Community](https://github.com/react-native-community)
-- [React Hooks: Avoiding Infinite Loops](https://stackoverflow.com/questions/53070970)
-- [Expo Router vs React Navigation Discussion](https://stackoverflow.com/questions/76778552)
 - [Stack Overflow - React Native](https://stackoverflow.com/questions/tagged/react-native)
+- [Expo GitHub](https://github.com/expo/expo)
 
-### Additional Learning Platforms
-- [React Native Official YouTube](https://www.youtube.com/c/ReactNative)
+### Learning Platforms
 - [Expo Official YouTube](https://www.youtube.com/c/Expo)
-- [freeCodeCamp React Native Course](https://www.freecodecamp.org/news/tag/react-native/)
-- [React Native Playground](https://snack.expo.dev/) 
+- [React Native Official YouTube](https://www.youtube.com/c/ReactNative)
+- [Expo Snack](https://snack.expo.dev/) 
+
